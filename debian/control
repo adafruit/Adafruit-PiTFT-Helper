@@ -12,4 +12,4 @@ Package: adafruit-pitft-helper
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Configuration helper for Adafruit PiTFT
- <insert long description, indented with spaces>
+ Tools for configuring Adafruit PiTFT modules.
