@@ -2,6 +2,22 @@
 
 set -e
 
+function print_version() {
+    echo "Adafruit PiTFT Helper v0.0.2"
+    exit 1
+}
+
+function print_help() {
+    echo "Usage: $0 -t [pitfttype]"
+    echo "    -h            Print this help"
+    echo "    -v            Print version information"
+    echo "    -r            Turn the root filesystem into PiTFT compatible"
+    echo "    -t [type]     Specify the type of PiTFT: '28r' (PID 1601) or '28c' (PID 1983) or '35r' or '22'"
+    echo
+    echo "You must specify a type of display."
+    exit 1
+}
+
 group=ADAFRUIT
 function info() {
     system="$1"
@@ -226,32 +242,52 @@ EOF
 
 # MAIN
 
-# TODO:  re-parameterize this
-pitfttype="28r"
+args=$(getopt -uo 'hvri:t:o:b:' -- $*)
+[ $? != 0 ] && print_help
+set -- $args
+
+for i
+do
+      case "$i"
+      in
+            -h)
+                    print_help
+                    ;;
+            -v)
+                    print_version
+                    ;;
+            -t)
+                    pitfttype="$2"
+                    echo "Type = ${2}"
+                    shift
+                    shift
+                    ;;
+      esac
+done
 
 if  [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]
 then
         echo "Type must be '28r' (2.8\" resistive, PID 1601) or '28c' (2.8\" capacitive, PID 1983)  or '35r' (3.5\" Resistive) or '22' (2.2\" no touch)"
-        # print_help
+        print_help
 fi
 
 info PITFT "Updating /etc/modules..."
-update_etcmodules   || bail "Unable to update /etc/modules"
+update_etcmodules || bail "Unable to update /etc/modules"
 
 info PITFT "Updating /etc/modprobe.d/adafruit.conf..."
 update_adafruitconf || bail "Unable to update /etc/modprobe.d/adafruit.conf"
 
 info PITFT "Updating X11 default calibration..."
-update_xorg         || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
+update_xorg || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
 
 info PITFT "Updating X11 setup tweaks..."
-update_x11profile   || bail "Unable to update X11 setup"
+update_x11profile || bail "Unable to update X11 setup"
 
 info PITFT "Updating TSLib default calibration..."
-update_pointercal   || bail "Unable to update /etc/pointercal"
+update_pointercal || bail "Unable to update /etc/pointercal"
 
 info PITFT "Updating SysFS rules for Touchscreen..."
-update_udev         || bail "Unable to update /etc/udev/rules.d"
+update_udev || bail "Unable to update /etc/udev/rules.d"
 
 # ask for console access?
 if ask "Would you like the console to appear on the PiTFT display?"; then
