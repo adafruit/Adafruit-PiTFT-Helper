@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.0.2"
+    echo "Adafruit PiTFT Helper v0.1.0"
     exit 1
 }
 
@@ -11,7 +11,6 @@ function print_help() {
     echo "Usage: $0 -t [pitfttype]"
     echo "    -h            Print this help"
     echo "    -v            Print version information"
-    echo "    -r            Turn the root filesystem into PiTFT compatible"
     echo "    -t [type]     Specify the type of PiTFT: '28r' (PID 1601) or '28c' (PID 1983) or '35r' or '22'"
     echo
     echo "You must specify a type of display."
@@ -71,55 +70,49 @@ function ask() {
     done
 }
 
-function update_etcmodules() {
-    if grep -xq "spi-bcm2708" "/etc/modules" ; then
-        echo "Already had spi-bcm2708"
-    else
-        echo "Adding spi-bcm2708"
-        echo 'spi-bcm2708' >> /etc/modules
+# update /boot/config.txt with appropriate values
+function update_configtxt() {
+
+    if grep -q "adafruit-pitft-helper" "/boot/config.txt" ; then
+        echo "Already have an adafruit-pitft-helper section in /boot/config.txt."
+        echo "Adding new section, but please run:"
+        echo "sudo nano /boot/config.txt"
+        echo "...and remove any duplicate sections."
     fi
 
-    if [ "${pitfttype}" == "28c" ] ; then
-        if grep -xq  "i2c-bcm2708" "/etc/modules" ; then
-            echo "Already had i2c-bcm2708"
-        else
-            echo "Adding i2c-bcm2708"
-            echo 'i2c-bcm2708' >> /etc/modules
-        fi
-    fi
-
-    if grep -xq  "fbtft_device" "${chr}/etc/modules" ; then
-        echo "Already had fbtft_device"
-    else
-        echo "Adding fbtft_device"
-        echo 'fbtft_device' >> /etc/modules
-    fi
-}
-
-function update_adafruitconf() {
     if [ "${pitfttype}" == "22" ] ; then
-        cat > /etc/modprobe.d/adafruit.conf <<EOF
-options fbtft_device name=adafruit22a gpios=dc:25 rotate=270 frequency=32000000
-EOF
+        # formerly: options fbtft_device name=adafruit22a gpios=dc:25 rotate=270 frequency=32000000
+        overlay="dtoverlay=pitft22,rotate=270,speed=32000000,fps=20"
     fi
 
     if [ "${pitfttype}" == "28r" ] ; then
-        cat > /etc/modprobe.d/adafruit.conf <<EOF
-options fbtft_device name=adafruitrt28 rotate=90 frequency=32000000
-EOF
+        overlay="dtoverlay=pitft28r,rotate=90,speed=32000000,fps=20"
     fi
 
     if [ "${pitfttype}" == "28c" ] ; then
-        cat > /etc/modprobe.d/adafruit.conf <<EOF
-options fbtft_device name=adafruitct28 rotate=90 frequency=32000000
-EOF
+        overlay="dtoverlay=pitft28c,rotate=90,speed=32000000,fps=20"
     fi
 
     if [ "${pitfttype}" == "35r" ] ; then
-        cat > /etc/modprobe.d/adafruit.conf <<EOF
-options fbtft_device name=adafruitrt35 rotate=90 frequency=32000000
-EOF
+        overlay="dtoverlay=pitft35r,rotate=90,speed=42000000,fps=20"
     fi
+
+    date=`date`
+
+    cat >> /boot/config.txt <<EOF
+# --- added by adafruit-pitft-helper $date ---
+[pi1]
+device_tree=bcm2708-rpi-b-plus.dtb
+[pi2]
+device_tree=bcm2709-rpi-2-b.dtb
+[all]
+dtparam=spi=on
+dtparam=i2c1=on
+dtparam=i2c_arm=on
+$overlay
+# --- end adafruit-pitft-helper $date ---
+EOF
+
 }
 
 # currently for '90' rotation only
@@ -265,17 +258,16 @@ do
       esac
 done
 
+if [[ $EUID -ne 0 ]]; then
+    echo "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
+    exit 1
+fi
+
 if  [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]
 then
         echo "Type must be '28r' (2.8\" resistive, PID 1601) or '28c' (2.8\" capacitive, PID 1983)  or '35r' (3.5\" Resistive) or '22' (2.2\" no touch)"
         print_help
 fi
-
-info PITFT "Updating /etc/modules..."
-update_etcmodules || bail "Unable to update /etc/modules"
-
-info PITFT "Updating /etc/modprobe.d/adafruit.conf..."
-update_adafruitconf || bail "Unable to update /etc/modprobe.d/adafruit.conf"
 
 info PITFT "Updating X11 default calibration..."
 update_xorg || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
@@ -302,3 +294,6 @@ if [ "${pitfttype}" != "35r" ]; then
         install_onoffbutton || bail "Unable to add on/off button"
     fi
 fi
+
+info PITFT "Updating /boot/config.txt..."
+update_configtxt || bail "Unable to update /boot/config.txt"
