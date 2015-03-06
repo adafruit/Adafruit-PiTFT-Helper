@@ -71,23 +71,6 @@ function ask() {
     done
 }
 
-function update_etcmodules() {
-    if grep -xq "spi-bcm2708" "/etc/modules" ; then
-        echo "Already had spi-bcm2708"
-    else
-        echo "Adding spi-bcm2708"
-        echo 'spi-bcm2708' >> /etc/modules
-    fi
-
-    if [ "${pitfttype}" == "28c" ] ; then
-        if grep -xq  "i2c-bcm2708" "/etc/modules" ; then
-            echo "Already had i2c-bcm2708"
-        else
-            echo "Adding i2c-bcm2708"
-            echo 'i2c-bcm2708' >> /etc/modules
-        fi
-    fi
-}
 
 function update_adafruitconf() {
     if [ "${pitfttype}" == "22" ] ; then
@@ -263,9 +246,6 @@ then
         echo "Type must be '28r' (2.8\" resistive, PID 1601) or '28c' (2.8\" capacitive, PID 1983)  or '35r' (3.5\" Resistive) or '22' (2.2\" no touch)"
         print_help
 fi
-
-info PITFT "Updating /etc/modules..."
-update_etcmodules || bail "Unable to update /etc/modules"
 
 info PITFT "Updating /etc/modprobe.d/adafruit.conf..."
 update_adafruitconf || bail "Unable to update /etc/modprobe.d/adafruit.conf"
