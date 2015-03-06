@@ -87,13 +87,6 @@ function update_etcmodules() {
             echo 'i2c-bcm2708' >> /etc/modules
         fi
     fi
-
-    if grep -xq  "fbtft_device" "${chr}/etc/modules" ; then
-        echo "Already had fbtft_device"
-    else
-        echo "Adding fbtft_device"
-        echo 'fbtft_device' >> /etc/modules
-    fi
 }
 
 function update_adafruitconf() {
