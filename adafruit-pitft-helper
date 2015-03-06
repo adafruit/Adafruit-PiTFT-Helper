@@ -101,6 +101,8 @@ function update_configtxt() {
 
     cat >> /boot/config.txt <<EOF
 # --- added by adafruit-pitft-helper $date ---
+[pi1]
+device_tree=bcm2708-rpi-b-plus.dtb
 [pi2]
 device_tree=bcm2709-rpi-2-b.dtb
 [all]
@@ -255,6 +257,11 @@ do
                     ;;
       esac
 done
+
+if [[ $EUID -ne 0 ]]; then
+    echo "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
+    exit 1
+fi
 
 if  [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]
 then
