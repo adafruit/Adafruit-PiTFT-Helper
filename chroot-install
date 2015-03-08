@@ -48,15 +48,24 @@ then
         print_help
 fi
 
-echo "mounting $target_image on /media/raspbian-target"
+target_mnt="/media/raspbian-target"
+
+echo "Mounting $target_image on $target_mnt"
 kpartx -av $target_image
-mkdir -p /media/raspbian-target
-mount /dev/mapper/loop0p2 /media/raspbian-target
-mount /dev/mapper/loop0p1 /media/raspbian-target/boot
+mkdir -p $target_mnt
+mount /dev/mapper/loop0p2 $target_mnt
+mount /dev/mapper/loop0p1 $target_mnt/boot
 
+echo "Adding apt.adafruit.com to sources.list"
+curl -SLs https://apt.adafruit.com/add | chroot $target_mnt /bin/bash
 
+echo "Installing adafruit-pitft-helper and dependencies"
+chroot $target_mnt sudo apt-get install adafruit-pitft-helper
 
-echo "unmounting $target_image"
-umount /media/raspbian-target/boot
-umount /media/raspbian-target
+echo "Running adafruit-pitft-helper"
+chroot $target_mnt sudo adafruit-pitft-helper -t $pitfttype
+
+echo "Unmounting $target_image"
+umount $target_mnt/boot
+umount $target_mnt
 kpartx -d $target_image
