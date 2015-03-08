@@ -43,7 +43,17 @@ card before trying this, or (even better!) start with a fresh card.
 ## Using adafruit-pitft-helper
 
 `adafruit-pitft-helper` must be run with root privileges, and takes a parameter
-specifying the type of 
+specifying the type of PiTFT to configure.  Invoke it like so:
+
+```sh
+sudo adafruit-pitft-helper -t 28r
+```
+
+For a full list of available options, check the help:
+
+```sh
+adafruit-pitft-helper -h
+```
 
 ## Installing PiTFT support in a Raspbian image file (experimental!)
 
