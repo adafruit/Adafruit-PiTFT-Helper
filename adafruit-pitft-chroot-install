@@ -38,7 +38,7 @@ do
 done
 
 if [[ $EUID -ne 0 ]]; then
-    echo "chroot-install must be run as root. try: sudo chroot-install"
+    echo "$0 must be run as root. try: sudo $0"
     exit 1
 fi
 

@@ -63,10 +63,9 @@ you can download and unzip a recent Raspbian image on a Raspberry Pi, then do
 something like the following in a terminal:
 
 ```sh
-sudo apt-get install kpartx
-git clone https://github.com/adafruit/Adafruit-PiTFT-Helper.git
-cd Adafruit-PiTFT-Helper
-sudo ./chroot-install -t 28r -i ~/2015-02-16-raspbian-wheezy.img
+curl -SLs https://apt.adafruit.com/add | sudo bash
+sudo apt-get install adafruit-pitft-helper
+sudo adafruit-pitft-chroot-install -t 28r -i ~/2015-02-16-raspbian-wheezy.img
 ```
 
 ...where `-t` specifies the type of PiTFT just like the same option to
@@ -74,4 +73,4 @@ sudo ./chroot-install -t 28r -i ~/2015-02-16-raspbian-wheezy.img
 
 [o]: https://github.com/adafruit/Adafruit-Occidentalis
 [p]: https://github.com/adafruit/Adafruit-Pi-Finder
-[c]: https://github.com/adafruit/Adafruit-PiTFT-Helper/blob/master/chroot-install
+[c]: https://github.com/adafruit/Adafruit-PiTFT-Helper/blob/master/adafruit-pitft-chroot-install
