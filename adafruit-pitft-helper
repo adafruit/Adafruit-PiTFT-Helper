@@ -31,7 +31,7 @@ function bail() {
     FG="1;31m"
     BG="40m"
     echo -en "[\033[${FG}\033[${BG}${group}\033[0m] "
-    if [ -z "$1" ] ; then
+    if [ -z "$1" ]; then
         echo "Exiting due to error"
     else
         echo "Exiting due to error: $*"
@@ -73,27 +73,27 @@ function ask() {
 # update /boot/config.txt with appropriate values
 function update_configtxt() {
 
-    if grep -q "adafruit-pitft-helper" "/boot/config.txt" ; then
+    if grep -q "adafruit-pitft-helper" "/boot/config.txt"; then
         echo "Already have an adafruit-pitft-helper section in /boot/config.txt."
         echo "Adding new section, but please run:"
         echo "sudo nano /boot/config.txt"
         echo "...and remove any duplicate sections."
     fi
 
-    if [ "${pitfttype}" == "22" ] ; then
+    if [ "${pitfttype}" == "22" ]; then
         # formerly: options fbtft_device name=adafruit22a gpios=dc:25 rotate=270 frequency=32000000
         overlay="dtoverlay=pitft22,rotate=270,speed=32000000,fps=20"
     fi
 
-    if [ "${pitfttype}" == "28r" ] ; then
+    if [ "${pitfttype}" == "28r" ]; then
         overlay="dtoverlay=pitft28r,rotate=90,speed=32000000,fps=20"
     fi
 
-    if [ "${pitfttype}" == "28c" ] ; then
+    if [ "${pitfttype}" == "28c" ]; then
         overlay="dtoverlay=pitft28c,rotate=90,speed=32000000,fps=20"
     fi
 
-    if [ "${pitfttype}" == "35r" ] ; then
+    if [ "${pitfttype}" == "35r" ]; then
         overlay="dtoverlay=pitft35r,rotate=90,speed=42000000,fps=20"
     fi
 
@@ -119,7 +119,7 @@ EOF
 function update_xorg() {
     mkdir -p /etc/X11/xorg.conf.d
 
-    if [ "${pitfttype}" == "28r" ] ; then
+    if [ "${pitfttype}" == "28r" ]; then
         cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
 Section "InputClass"
         Identifier      "calibration"
@@ -130,7 +130,7 @@ EndSection
 EOF
     fi
 
-    if [ "${pitfttype}" == "35r" ] ; then
+    if [ "${pitfttype}" == "35r" ]; then
         cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
 Section "InputClass"
         Identifier      "calibration"
@@ -141,7 +141,7 @@ EndSection
 EOF
     fi
 
-    if [ "${pitfttype}" == "28c" ] ; then
+    if [ "${pitfttype}" == "28c" ]; then
         cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
 Section "InputClass"
          Identifier "captouch"
@@ -156,12 +156,12 @@ EOF
 
 function update_x11profile() {
     fbturbo_path="/usr/share/X11/xorg.conf.d/99-fbturbo.conf"
-    if [ -e $fbturbo_path ] ; then
+    if [ -e $fbturbo_path ]; then
         echo "Moving ${fbturbo_path} to /home/pi/"
         mv $fbturbo_path /home/pi
     fi
 
-    if grep -xq "export FRAMEBUFFER=/dev/fb1" "/home/pi/.profile" ; then
+    if grep -xq "export FRAMEBUFFER=/dev/fb1" "/home/pi/.profile"; then
         echo "Already had 'export FRAMEBUFFER=/dev/fb1'"
     else
         echo "Adding 'export FRAMEBUFFER=/dev/fb1'"
@@ -211,9 +211,26 @@ function install_console() {
     sudo sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
 }
 
+function update_etcmodules() {
+    if [ "${pitfttype}" == "28c" ]; then
+        ts_module="ft6x06_ts"
+    elif [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
+        ts_module="stmpe_ts"
+    else
+        return
+    fi
+
+    if grep -xq "$ts_module" "/etc/modules"; then
+        echo "Already had $ts_module"
+    else
+        echo "Adding $ts_module"
+        echo "$ts_module" >> /etc/modules
+    fi
+}
+
 function install_onoffbutton() {
     echo "Adding rpi_power_switch to /etc/modules"
-    if grep -xq "rpi_power_switch" "${chr}/etc/modules" ; then
+    if grep -xq "rpi_power_switch" "${chr}/etc/modules"; then
         echo "Already had rpi_power_switch"
     else
         echo "Adding rpi_power_switch"
@@ -223,7 +240,7 @@ EOF
     fi
 
     echo "Adding rpi_power_switch config to /etc/modprobe.d/adafruit.conf"
-    if grep -xq "options rpi_power_switch gpio_pin=23 mode=0" "${chr}/etc/modprobe.d/adafruit.conf" ; then
+    if grep -xq "options rpi_power_switch gpio_pin=23 mode=0" "${chr}/etc/modprobe.d/adafruit.conf"; then
         echo "Already had rpi_power_switch config"
     else
         echo "Adding rpi_power_switch"
@@ -286,6 +303,9 @@ if ask "Would you like the console to appear on the PiTFT display?"; then
     info PITFT "Updating console to PiTFT..."
     install_console || bail "Unable to configure console"
 fi
+
+info PITFT "Updating /etc/modules..."
+update_etcmodules || bail "Unable to update /etc/modules"
 
 if [ "${pitfttype}" != "35r" ]; then
     # ask for 'on/off' button
