@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.1.0"
+    echo "Adafruit PiTFT Helper v0.4.0"
     exit 1
 }
 
