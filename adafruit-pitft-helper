@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.4.0"
+    echo "Adafruit PiTFT Helper v0.4.1"
     exit 1
 }
 
@@ -224,7 +224,7 @@ function update_etcmodules() {
     elif [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
         ts_module="stmpe_ts"
     else
-        return
+        return 0
     fi
 
     if grep -xq "$ts_module" "/etc/modules"; then
@@ -265,21 +265,21 @@ set -- $args
 
 for i
 do
-      case "$i"
-      in
-            -h)
-                    print_help
-                    ;;
-            -v)
-                    print_version
-                    ;;
-            -t)
-                    pitfttype="$2"
-                    echo "Type = ${2}"
-                    shift
-                    shift
-                    ;;
-      esac
+    case "$i"
+    in
+        -h)
+            print_help
+            ;;
+        -v)
+            print_version
+            ;;
+        -t)
+            pitfttype="$2"
+            echo "Type = ${2}"
+            shift
+            shift
+            ;;
+    esac
 done
 
 if [[ $EUID -ne 0 ]]; then
@@ -287,10 +287,14 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-if  [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]
-then
-        echo "Type must be '28r' (2.8\" resistive, PID 1601) or '28c' (2.8\" capacitive, PID 1983)  or '35r' (3.5\" Resistive) or '22' (2.2\" no touch)"
-        print_help
+if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]; then
+    echo "Type must be one of:"
+    echo "  '28r' (2.8\" resistive, PID 1601)"
+    echo "  '28c' (2.8\" capacitive, PID 1983)"
+    echo "  '35r' (3.5\" Resistive)"
+    echo "  '22'  (2.2\" no touch)"
+    echo
+    print_help
 fi
 
 info PITFT "Updating X11 default calibration..."
