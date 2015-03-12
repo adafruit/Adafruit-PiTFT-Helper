@@ -100,6 +100,7 @@ function update_configtxt() {
     date=`date`
 
     cat >> /boot/config.txt <<EOF
+
 # --- added by adafruit-pitft-helper $date ---
 [pi1]
 device_tree=bcm2708-rpi-b-plus.dtb
@@ -207,8 +208,14 @@ EOF
 }
 
 function install_console() {
-    sudo sed -i 's/rootwait$/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
-    sudo sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
+    sed -i 's/rootwait$/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
+    sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
+}
+
+function uninstall_console() {
+    sed -i 's/rootwait fbcon=map:10 fbcon=font:VGA8x8/rootwait/g' "/boot/cmdline.txt"
+    sed -i 's/BLANK_TIME=0/BLANK_TIME=10/g' "/etc/kbd/config"
+    echo "Screen blanking time reset to 10 minutes"
 }
 
 function update_etcmodules() {
@@ -298,10 +305,13 @@ update_pointercal || bail "Unable to update /etc/pointercal"
 info PITFT "Updating SysFS rules for Touchscreen..."
 update_udev || bail "Unable to update /etc/udev/rules.d"
 
-# ask for console access?
+# ask for console access
 if ask "Would you like the console to appear on the PiTFT display?"; then
     info PITFT "Updating console to PiTFT..."
     install_console || bail "Unable to configure console"
+else
+    info PITFT "Making sure console doesn't use PiTFT"
+    uninstall_console || bail "Unable to configure console"
 fi
 
 info PITFT "Updating /etc/modules..."
