@@ -65,6 +65,9 @@ chroot $target_mnt sudo apt-get install adafruit-pitft-helper
 echo "Running adafruit-pitft-helper"
 chroot $target_mnt sudo adafruit-pitft-helper -t $pitfttype
 
+echo "Dropping you into Bash"
+chroot $target_mnt sudo /bin/bash
+
 echo "Unmounting $target_image"
 umount $target_mnt/boot
 umount $target_mnt
