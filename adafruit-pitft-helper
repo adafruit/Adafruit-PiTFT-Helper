@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.4.1"
+    echo "Adafruit PiTFT Helper v0.5.0"
     exit 1
 }
 
@@ -11,6 +11,7 @@ function print_help() {
     echo "Usage: $0 -t [pitfttype]"
     echo "    -h            Print this help"
     echo "    -v            Print version information"
+    echo "    -u [homedir]  Specify path of primary user's home directory (defaults to /home/pi)"
     echo "    -t [type]     Specify the type of PiTFT: '28r' (PID 1601) or '28c' (PID 1983) or '35r' or '22'"
     echo
     echo "You must specify a type of display."
@@ -158,15 +159,15 @@ EOF
 function update_x11profile() {
     fbturbo_path="/usr/share/X11/xorg.conf.d/99-fbturbo.conf"
     if [ -e $fbturbo_path ]; then
-        echo "Moving ${fbturbo_path} to /home/pi/"
-        mv $fbturbo_path /home/pi
+        echo "Moving ${fbturbo_path} to ${target_homedir}"
+        mv "$fbturbo_path" "$target_homedir"
     fi
 
-    if grep -xq "export FRAMEBUFFER=/dev/fb1" "/home/pi/.profile"; then
+    if grep -xq "export FRAMEBUFFER=/dev/fb1" "${target_homedir}/.profile"; then
         echo "Already had 'export FRAMEBUFFER=/dev/fb1'"
     else
         echo "Adding 'export FRAMEBUFFER=/dev/fb1'"
-        cat >> /home/pi/.profile <<EOF
+        cat >> "${target_homedir}.profile" <<EOF
 export FRAMEBUFFER=/dev/fb1
 EOF
     fi
@@ -208,7 +209,12 @@ EOF
 }
 
 function install_console() {
-    sed -i 's/rootwait$/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
+    if ! grep -q 'fbcon=map:10 fbcon=font:VGA8x8' /boot/cmdline.txt; then
+        echo "Updating /boot/cmdline.txt"
+        sed -i 's/rootwait/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
+    else
+        echo "/boot/cmdline.txt already updated"
+    fi
     sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
 }
 
@@ -259,7 +265,9 @@ EOF
 
 # MAIN
 
-args=$(getopt -uo 'hvri:t:o:b:' -- $*)
+target_homedir="/home/pi"
+
+args=$(getopt -uo 'hvri:t:o:b:u:' -- $*)
 [ $? != 0 ] && print_help
 set -- $args
 
@@ -273,6 +281,12 @@ do
         -v)
             print_version
             ;;
+        -u)
+            target_homedir="$2"
+            echo "Homedir = ${2}"
+            shift
+            shift
+            ;;
         -t)
             pitfttype="$2"
             echo "Type = ${2}"
@@ -283,8 +297,17 @@ do
 done
 
 if [[ $EUID -ne 0 ]]; then
-    echo "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
-    exit 1
+    bail "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
+fi
+
+if grep -q boot /proc/mounts; then
+    echo "/boot is mounted"
+else
+    bail "/boot must be mounted. try: sudo mount /dev/mmcblk0p1 /boot"
+fi
+
+if [[ ! -e "$target_homedir" || ! -d "$target_homedir" ]]; then
+    bail "$target_homedir must be an existing directory (use -u /home/foo to specify)"
 fi
 
 if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]; then
