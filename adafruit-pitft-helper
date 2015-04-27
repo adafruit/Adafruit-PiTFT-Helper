@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.5.0"
+    echo "Adafruit PiTFT Helper v0.5.1"
     exit 1
 }
 
@@ -167,7 +167,7 @@ function update_x11profile() {
         echo "Already had 'export FRAMEBUFFER=/dev/fb1'"
     else
         echo "Adding 'export FRAMEBUFFER=/dev/fb1'"
-        cat >> "${target_homedir}.profile" <<EOF
+        cat >> "${target_homedir}/.profile" <<EOF
 export FRAMEBUFFER=/dev/fb1
 EOF
     fi
