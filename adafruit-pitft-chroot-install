@@ -60,6 +60,7 @@ echo "Adding apt.adafruit.com to sources.list"
 curl -SLs https://apt.adafruit.com/add | chroot $target_mnt /bin/bash
 
 echo "Installing adafruit-pitft-helper and dependencies"
+chroot $target_mnt sudo apt-get install raspberrypi-bootloader-adafruit-pitft
 chroot $target_mnt sudo apt-get install adafruit-pitft-helper
 
 echo "Running adafruit-pitft-helper"
