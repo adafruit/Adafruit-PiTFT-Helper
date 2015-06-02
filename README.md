@@ -20,16 +20,18 @@ from another computer, we offer an easy graphical tool called the [Pi Finder][p]
 Once bootstrapped, you can open a terminal on your Pi and run:
 
 ```sh
+sudo apt-get install raspberrypi-bootloader-adafruit-pitft
 sudo apt-get install adafruit-pitft-helper
 ```
 
-...which will install both the helper script and a custom kernel with PiTFT
-support.  If you _just_ want to install the kernel and helper without pulling
-down any other extra packages, you can run the following from the command line
-of a working Pi:
+...which first installs a custom kernel with PiTFT support, and then the helper
+script itself.  If you _just_ want to install the kernel and helper without
+pulling down any other extra packages, you can run the following from the
+command line of a working Pi:
 
 ```sh
 curl -SLs https://apt.adafruit.com/add | sudo bash
+sudo apt-get install raspberrypi-bootloader-adafruit-pitft
 sudo apt-get install adafruit-pitft-helper
 ```
 
