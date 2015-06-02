@@ -3,9 +3,10 @@
 set -e
 
 function print_help() {
-    echo "Usage: $0 -t [pitfttype]"
+    echo "Usage: $0 -t [pitfttype] -i target.img"
     echo "    -h            Print this help"
     echo "    -t [type]     Specify the type of PiTFT: '28r' (PID 1601) or '28c' (PID 1983) or '35r' or '22'"
+    echo "    -i [target]   Specify an ISO to perform install on (a recent Pi Foundation Raspbian)"
     echo
     echo "You must specify a type of display."
     exit 1
@@ -44,8 +45,8 @@ fi
 
 if  [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]
 then
-        echo "Type must be '28r' (2.8\" resistive, PID 1601) or '28c' (2.8\" capacitive, PID 1983)  or '35r' (3.5\" Resistive) or '22' (2.2\" no touch)"
-        print_help
+    echo "Type must be '28r' (2.8\" resistive, PID 1601) or '28c' (2.8\" capacitive, PID 1983)  or '35r' (3.5\" Resistive) or '22' (2.2\" no touch)"
+    print_help
 fi
 
 target_mnt="/media/raspbian-target"
@@ -56,12 +57,15 @@ mkdir -p $target_mnt
 mount /dev/mapper/loop0p2 $target_mnt
 mount /dev/mapper/loop0p1 $target_mnt/boot
 
+echo "Dropping you into Bash"
+chroot $target_mnt sudo /bin/bash
+
 echo "Adding apt.adafruit.com to sources.list"
 curl -SLs https://apt.adafruit.com/add | chroot $target_mnt /bin/bash
 
-echo "Installing adafruit-pitft-helper and dependencies"
-chroot $target_mnt sudo apt-get install raspberrypi-bootloader-adafruit-pitft
-chroot $target_mnt sudo apt-get install adafruit-pitft-helper
+echo "Installing kernel and adafruit-pitft-helper"
+chroot $target_mnt sudo apt-get install -y raspberrypi-bootloader-adafruit-pitft
+chroot $target_mnt sudo apt-get install -y adafruit-pitft-helper
 
 echo "Running adafruit-pitft-helper"
 chroot $target_mnt sudo adafruit-pitft-helper -t $pitfttype
