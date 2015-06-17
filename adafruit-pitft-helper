@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.7.0"
+    echo "Adafruit PiTFT Helper v0.7.1"
     exit 1
 }
 
@@ -303,7 +303,12 @@ fi
 if grep -q boot /proc/mounts; then
     echo "/boot is mounted"
 else
-    bail "/boot must be mounted. try: sudo mount /dev/mmcblk0p1 /boot"
+    echo "/boot must be mounted. if you think it's not, quit here and try: sudo mount /dev/mmcblk0p1 /boot"
+    if ask "Continue?"; then
+        echo "Proceeding."
+    else
+        bail "Aborting."
+    fi
 fi
 
 if [[ ! -e "$target_homedir" || ! -d "$target_homedir" ]]; then
