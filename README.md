@@ -2,8 +2,6 @@
 
 A script for configuring Adafruit's PiTFT displays on a Raspberry Pi.
 
-**This is in a beta state and may contain bugs.**
-
 ## PiTFT Documentation
 
 Products:
@@ -30,7 +28,7 @@ from another computer, we offer an easy graphical tool called the [Pi Finder][p]
 Once bootstrapped, you can open a terminal on your Pi and run:
 
 ```sh
-sudo apt-get install raspberrypi-bootloader-adafruit-pitft
+sudo apt-get install raspberrypi-bootloader
 sudo apt-get install adafruit-pitft-helper
 ```
 
@@ -41,7 +39,7 @@ command line of a working Pi:
 
 ```sh
 curl -SLs https://apt.adafruit.com/add | sudo bash
-sudo apt-get install raspberrypi-bootloader-adafruit-pitft
+sudo apt-get install raspberrypi-bootloader
 sudo apt-get install adafruit-pitft-helper
 ```
 
