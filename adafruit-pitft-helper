@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.7.1"
+    echo "Adafruit PiTFT Helper v0.7.2"
     exit 1
 }
 
@@ -359,3 +359,9 @@ fi
 
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
+
+info PITFT "Success!"
+info PITFT "Notes:"
+echo "Please don't run rpi-update, or you'll have to re-install a kernel"
+echo "with PiTFT support.  For more info, see:"
+echo "https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-raspberry-pi/faq"
