@@ -54,14 +54,17 @@ target_mnt="/media/raspbian-target"
 echo "Mounting $target_image on $target_mnt"
 kpartx -av $target_image
 mkdir -p $target_mnt
-mount /dev/mapper/loop0p2 $target_mnt
-mount /dev/mapper/loop0p1 $target_mnt/boot
+mount /dev/dm-1 $target_mnt
+mount /dev/dm-0 $target_mnt/boot
 
-echo "Dropping you into Bash"
+echo "Dropping you into Bash before install"
 chroot $target_mnt sudo /bin/bash
 
 echo "Adding apt.adafruit.com to sources.list"
 curl -SLs https://apt.adafruit.com/add | chroot $target_mnt /bin/bash
+
+# pin apt.adafruit.com origin for anything installed there:
+echo -e "Package: *\nPin: origin \"apt.adafruit.com\"\nPin-Priority: 1001" | chroot $target_mnt bash -c "cat > /etc/apt/preferences.d/adafruit"
 
 echo "Installing kernel and adafruit-pitft-helper"
 chroot $target_mnt sudo apt-get install -y raspberrypi-bootloader
@@ -70,7 +73,7 @@ chroot $target_mnt sudo apt-get install -y adafruit-pitft-helper
 echo "Running adafruit-pitft-helper"
 chroot $target_mnt sudo adafruit-pitft-helper -t $pitfttype
 
-echo "Dropping you into Bash"
+echo "Dropping you into Bash after install"
 chroot $target_mnt sudo /bin/bash
 
 echo "Unmounting $target_image"
