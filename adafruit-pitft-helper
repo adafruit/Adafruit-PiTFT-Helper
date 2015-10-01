@@ -263,6 +263,19 @@ EOF
     fi
 }
 
+function update_bootprefs() {
+    echo "Turning off boot-to-desktop"
+    if [ -e /etc/init.d/lightdm ]; then
+      if [ $SYSTEMD -eq 1 ]; then
+        systemctl set-default multi-user.target
+        ln -fs /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@tty1.service
+      else
+        update-rc.d lightdm disable 2
+        sed /etc/inittab -i -e "s/1:2345:respawn:\/bin\/login -f pi tty1 <\/dev\/tty1 >\/dev\/tty1 2>&1/1:2345:respawn:\/sbin\/getty --noclear 38400 tty1/"
+      fi
+    fi
+}
+
 # MAIN
 
 target_homedir="/home/pi"
@@ -301,12 +314,12 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # check init system (technique borrowed from raspi-config):
-info 'Checking init system...'
+info PITFT 'Checking init system...'
 if command -v systemctl > /dev/null && systemctl | grep -q '\-\.mount'; then
-  info "Found systemd"
+  echo "Found systemd"
   SYSTEMD=1
 elif [ -f /etc/init.d/cron ] && [ ! -h /etc/init.d/cron ]; then
-  info "Found sysvinit"
+  echo "Found sysvinit"
   SYSTEMD=0
 else
   bail "Unrecognised init system"
@@ -368,6 +381,9 @@ if [ "${pitfttype}" != "35r" ]; then
         install_onoffbutton || bail "Unable to add on/off button"
     fi
 fi
+
+info PITFT
+update_bootprefs || bail "Unable to set boot preferences"
 
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
