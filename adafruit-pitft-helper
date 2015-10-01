@@ -300,6 +300,18 @@ if [[ $EUID -ne 0 ]]; then
     bail "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
 fi
 
+# check init system (technique borrowed from raspi-config):
+info 'Checking init system...'
+if command -v systemctl > /dev/null && systemctl | grep -q '\-\.mount'; then
+  info "Found systemd"
+  SYSTEMD=1
+elif [ -f /etc/init.d/cron ] && [ ! -h /etc/init.d/cron ]; then
+  info "Found sysvinit"
+  SYSTEMD=0
+else
+  bail "Unrecognised init system"
+fi
+
 if grep -q boot /proc/mounts; then
     echo "/boot is mounted"
 else
