@@ -121,6 +121,14 @@ EOF
 function update_xorg() {
     mkdir -p /etc/X11/xorg.conf.d
 
+    cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
+Section "Device" 
+  Identifier "myfb"
+  Driver "fbdev"
+  Option "fbdev" "/dev/fb1"
+EndSection
+EOF
+
     if [ "${pitfttype}" == "28r" ]; then
         cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
 Section "InputClass"
@@ -382,8 +390,7 @@ if [ "${pitfttype}" != "35r" ]; then
     fi
 fi
 
-info PITFT
-update_bootprefs || bail "Unable to set boot preferences"
+# update_bootprefs || bail "Unable to set boot preferences"
 
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
