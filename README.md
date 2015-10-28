@@ -81,6 +81,19 @@ sudo adafruit-pitft-chroot-install -t 28r -i ~/2015-02-16-raspbian-wheezy.img
 ...where `-t` specifies the type of PiTFT just like the same option to
 `adafruit-pitft-helper`, and `-i` specifies the path to an image file.
 
+You can also use [`adafruit-pi-chroot`][pi-chroot] to run a `chroot`ed shell
+inside of a Raspbian ISO image.  Like the install wrapper, this relies on
+`kpartx`.
+
+These are the scripts we use to produce the Easy Install images offered in
+Adafruit product documentation.  They may be a bit rough around the edges.
+
+## Older Versions
+
+For the version supporting Raspbian Wheezy, check out the `wheezy` branch
+on this repository.
+
 [o]: https://github.com/adafruit/Adafruit-Occidentalis
 [p]: https://github.com/adafruit/Adafruit-Pi-Finder
 [c]: https://github.com/adafruit/Adafruit-PiTFT-Helper/blob/master/adafruit-pitft-chroot-install
+[pi-chroot]: https://github.com/adafruit/Adafruit-PiTFT-Helper/blob/master/adafruit-pi-chroot
