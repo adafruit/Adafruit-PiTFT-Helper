@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 function print_help() {
     echo "Usage: $0 -t [pitfttype] -i target.img"
     echo "    -h            Print this help"
@@ -51,11 +49,16 @@ fi
 
 target_mnt="/media/raspbian-target"
 
+# assemble a mostly-legit filesystem by mounting / and /boot from the target
+# iso, plus /dev from the host pi (/dev/(u)random seems to be required by
+# recent versions of GPG):
 echo "Mounting $target_image on $target_mnt"
 kpartx -av $target_image
 mkdir -p $target_mnt
 mount /dev/dm-1 $target_mnt
 mount /dev/dm-0 $target_mnt/boot
+mkdir -p $target_mnt/dev
+mount --bind /dev $target_mnt/dev
 
 echo "Dropping you into Bash before install"
 chroot $target_mnt sudo /bin/bash
@@ -67,8 +70,8 @@ curl -SLs https://apt.adafruit.com/add | chroot $target_mnt /bin/bash
 echo -e "Package: *\nPin: origin \"apt.adafruit.com\"\nPin-Priority: 1001" | chroot $target_mnt bash -c "cat > /etc/apt/preferences.d/adafruit"
 
 echo "Installing kernel and adafruit-pitft-helper"
-chroot $target_mnt sudo apt-get install -y raspberrypi-bootloader
-chroot $target_mnt sudo apt-get install -y adafruit-pitft-helper
+chroot $target_mnt sudo apt-get install raspberrypi-bootloader
+chroot $target_mnt sudo apt-get install adafruit-pitft-helper
 
 echo "Running adafruit-pitft-helper"
 chroot $target_mnt sudo adafruit-pitft-helper -t $pitfttype
@@ -78,5 +81,6 @@ chroot $target_mnt sudo /bin/bash
 
 echo "Unmounting $target_image"
 umount $target_mnt/boot
+umount $target_mnt/dev
 umount $target_mnt
 kpartx -d $target_image
