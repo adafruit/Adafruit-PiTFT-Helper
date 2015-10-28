@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -e
+
+function print_help() {
+    echo "$0: get a chroot shell inside of a Raspbian ISO"
+    echo "Usage: $0 target.img"
+    echo "    -h            Print this help"
+    echo "    -i [target]   Specify an ISO to chroot to (probably a Pi Foundation Raspbian)"
+    exit 1
+}
+
+args=$(getopt -uo 'ht:i:' -- $*)
+[ $? != 0 ] && print_help
+set -- $args
+
+for i
+do
+      case "$i"
+      in
+            -h)
+                    print_help
+                    ;;
+            -i)
+                    target_image="$2"
+                    echo "Image = ${2}"
+                    shift
+                    shift
+                    ;;
+      esac
+done
+
+if [[ $EUID -ne 0 ]]; then
+    echo "$0 must be run as root. try: sudo $0"
+    exit 1
+fi
+
+target_mnt="/media/raspbian-target"
+
+# assemble a mostly-legit filesystem by mounting / and /boot from the target
+# iso, plus /dev from the host pi (/dev/(u)random seems to be required by
+# recent versions of GPG):
+echo "Mounting $target_image on $target_mnt"
+kpartx -av $target_image
+mkdir -p $target_mnt
+mount /dev/dm-1 $target_mnt
+mount /dev/dm-0 $target_mnt/boot
+mkdir -p $target_mnt/dev
+mount --bind /dev $target_mnt/dev
+
+echo "Dropping you into Bash - image will be unmounted after exit"
+chroot $target_mnt sudo /bin/bash
+
+echo "Unmounting $target_image"
+umount $target_mnt/boot
+umount $target_mnt/dev
+umount $target_mnt
+kpartx -d $target_image
