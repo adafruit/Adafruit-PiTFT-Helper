@@ -359,7 +359,7 @@ if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}
     print_help
 fi
 
-info PITFT "Updating X11 default calibration..."
+info PITFT "Updating X11 default calibration, patched to work in Kali without breaking HDMI..."
 update_xorg || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
 
 info PITFT "Updating X11 setup tweaks..."
