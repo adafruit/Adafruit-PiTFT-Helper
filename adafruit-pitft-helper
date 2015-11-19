@@ -121,13 +121,14 @@ EOF
 function update_xorg() {
     mkdir -p /etc/X11/xorg.conf.d
 
-    cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
-Section "Device" 
-  Identifier "myfb"
-  Driver "fbdev"
-  Option "fbdev" "/dev/fb1"
-EndSection
-EOF
+#### We won't create this file under Kali as it breaks HDMI output
+##    cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
+##Section "Device" 
+##  Identifier "myfb"
+##  Driver "fbdev"
+##  Option "fbdev" "/dev/fb1"
+##EndSection
+##EOF
 
     if [ "${pitfttype}" == "28r" ]; then
         cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
