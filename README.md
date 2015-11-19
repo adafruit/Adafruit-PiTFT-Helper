@@ -1,6 +1,7 @@
 # Adafruit-PiTFT-Helper
 
-A script for configuring Adafruit's PiTFT displays on a Raspberry Pi.
+A script for configuring Adafruit's PiTFT displays on a Raspberry Pi adjusted to work with **++Kali Linux 2.0.1 on Raspberry Pi 2++**. 
+The original version breaks HDMI output.
 
 ## PiTFT Documentation
 
