@@ -19,6 +19,7 @@ function print_help() {
     echo "                                             '35r'      (Adafruit 3.5\")"
     echo "                                             '22'       (Adafruit 2.2\")"
     echo "                                             'elec22'   (Elecfreak 2.2\")"
+    echo "                                             'jb35'     (JBTek 3.5\")"
     echo "                                             'sain32'   (Sainsmart 3.2\")"
     echo "                                             'wave32'   (Waveshare 3.2\")"
     echo "                                             'wave35'   (Waveshare 3.5\")"
@@ -106,6 +107,22 @@ function update_configtxt() {
     if [ "${pitfttype}" == "35r" ]; then
         overlay="dtoverlay=pitft35r,rotate=90,speed=42000000,fps=20"
     fi
+    
+    if [ "${pitfttype}" == "elec22" ]; then
+        overlay="dtoverlay=elec22"
+    fi
+    if [ "${pitfttype}" == "jb35" ]; then
+        overlay="dtoverlay=jbtek"
+    fi
+    if [ "${pitfttype}" == "sain32" ]; then
+        overlay="dtoverlay=sainsmart32"
+    fi
+    if [ "${pitfttype}" == "wave32" ]; then
+        overlay="dtoverlay=waveshare32b"
+    fi
+    if [ "${pitfttype}" == "wave35" ]; then
+        overlay="dtoverlay=waveshare35a"
+    fi
 
     date=`date`
 
@@ -169,6 +186,26 @@ Section "InputClass"
          Option "SwapAxes" "1"
          Option "InvertY" "1"
          Option "Calibration" "0 320 0 240"
+EndSection
+EOF
+    fi
+    if [ "${pitfttype}" == "wave32" ]; then
+        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+Section "InputClass"
+         Identifier "calibration"
+         MatchProduct "ADS7846 Touchscreen"
+         Option "SwapAxes" "1"
+         Option "Calibration" "160 3723 3896 181"
+EndSection
+EOF
+    fi
+    if [ "${pitfttype}" == "wave35" ]; then
+        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+Section "InputClass"
+         Identifier "calibration"
+         MatchProduct "ADS7846 Touchscreen"
+         Option "SwapAxes" "1"
+         Option "Calibration" "160 3723 3896 181"
 EndSection
 EOF
     fi
@@ -365,6 +402,7 @@ if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}
     echo "  '35r'      (Adafruit 3.5\" Resistive)"
     echo "  '22'       (Adafruit 2.2\" no touch)"
     echo "  'elec22'   (Elecfreak 2.2\")"
+    echo "  'jb35'     (JBTek 3.5\")"
     echo "  'sain32'   (Sainsmart 3.2\")"
     echo "  'wave32'   (Waveshare 3.2\")"
     echo "  'wave35'   (Waveshare 3.5\")"
