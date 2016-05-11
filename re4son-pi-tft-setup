@@ -3,7 +3,7 @@
 set -e
 
 function print_version() {
-    echo "Re4son Pi-TFT Helper v0.1.0"
+    echo "Re4son Pi-TFT Setup v0.1.0"
     echo "Based on Adafruit PiTFT Helper v0.8.0"
     exit 1
 }
@@ -84,8 +84,8 @@ function ask() {
 # update /boot/config.txt with appropriate values
 function update_configtxt() {
 
-    if grep -q "tft-helper" "/boot/config.txt"; then
-        echo "Already have a tft-helper section in /boot/config.txt."
+    if grep -q "pi-tft" "/boot/config.txt"; then
+        echo "Already have a tft-setup section in /boot/config.txt."
         echo "Adding new section, but please run:"
         echo "sudo nano /boot/config.txt"
         echo "...and remove any duplicate sections."
@@ -128,7 +128,7 @@ function update_configtxt() {
 
     cat >> /boot/config.txt <<EOF
 
-# --- added by re4son-pi-tft-helper $date ---
+# --- added by re4son-pi-tft-setup $date ---
 [pi1]
 device_tree=bcm2708-rpi-b-plus.dtb
 [pi2]
@@ -138,7 +138,7 @@ dtparam=spi=on
 dtparam=i2c1=on
 dtparam=i2c_arm=on
 $overlay
-# --- end re4son-pi-tft-helper $date ---
+# --- end re4son-pi-tft-setup $date ---
 EOF
 
 }
@@ -365,7 +365,7 @@ do
 done
 
 if [[ $EUID -ne 0 ]]; then
-    bail "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
+    bail "re4son-pi-tft-setup must be run as root. try: sudo re4son-pi-tft-setup"
 fi
 
 # check init system (technique borrowed from raspi-config):
