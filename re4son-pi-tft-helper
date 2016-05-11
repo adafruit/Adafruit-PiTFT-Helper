@@ -27,7 +27,7 @@ function print_help() {
     exit 1
 }
 
-group=ADAFRUIT
+group=RE4SON
 function info() {
     system="$1"
     group="${system}"
@@ -84,7 +84,7 @@ function ask() {
 function update_configtxt() {
 
     if grep -q "tft-helper" "/boot/config.txt"; then
-        echo "Already have a re4son-pi-tft-helper section in /boot/config.txt."
+        echo "Already have a tft-helper section in /boot/config.txt."
         echo "Adding new section, but please run:"
         echo "sudo nano /boot/config.txt"
         echo "...and remove any duplicate sections."
