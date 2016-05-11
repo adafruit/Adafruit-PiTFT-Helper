@@ -118,10 +118,10 @@ function update_configtxt() {
         overlay="dtoverlay=sainsmart32"
     fi
     if [ "${pitfttype}" == "wave32" ]; then
-        overlay="dtoverlay=waveshare32b"
+        overlay="dtoverlay=waveshare32b:rotate=270"
     fi
     if [ "${pitfttype}" == "wave35" ]; then
-        overlay="dtoverlay=waveshare35a"
+        overlay="dtoverlay=waveshare35a:rotate=270"
     fi
 
     date=`date`
