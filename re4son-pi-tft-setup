@@ -18,9 +18,9 @@ function print_help() {
     echo "                                             '28c'      (Adafruit 2.8\" PID 1983)"
     echo "                                             '35r'      (Adafruit 3.5\")"
     echo "                                             '22'       (Adafruit 2.2\")"
-    echo "                                             'elec22'   (Elecfreak 2.2\")"
-    echo "                                             'jb35'     (JBTek 3.5\")"
-    echo "                                             'sain32'   (Sainsmart 3.2\")"
+##    echo "                                             'elec22'   (Elecfreak 2.2\")"
+##    echo "                                             'jb35'     (JBTek 3.5\")"
+##    echo "                                             'sain32'   (Sainsmart 3.2\")"
     echo "                                             'wave32'   (Waveshare 3.2\")"
     echo "                                             'wave35'   (Waveshare 3.5\")"
     echo
@@ -147,14 +147,14 @@ EOF
 function update_xorg() {
     mkdir -p /etc/X11/xorg.conf.d
 
-#### We won't create this file under Kali as it breaks HDMI output
-##    cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
-##Section "Device" 
-##  Identifier "myfb"
-##  Driver "fbdev"
-##  Option "fbdev" "/dev/fb1"
-##EndSection
-##EOF
+We won't create this file under Kali as it breaks HDMI output
+    cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
+Section "Device" 
+  Identifier "myfb"
+  Driver "fbdev"
+  Option "fbdev" "/dev/fb1"
+EndSection
+EOF
 
     if [ "${pitfttype}" == "28r" ]; then
         cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
@@ -395,15 +395,15 @@ if [[ ! -e "$target_homedir" || ! -d "$target_homedir" ]]; then
     bail "$target_homedir must be an existing directory (use -u /home/foo to specify)"
 fi
 
-if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]; then
+if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ] && [ "${pitfttype}" != "wave32" ] && [ "${pitfttype}" != "wave35" ]; then
     echo "Type must be one of:"
     echo "  '28r'      (Adafruit 2.8\" resistive, PID 1601)"
     echo "  '28c'      (Adafruit 2.8\" capacitive, PID 1983)"
     echo "  '35r'      (Adafruit 3.5\" Resistive)"
     echo "  '22'       (Adafruit 2.2\" no touch)"
-    echo "  'elec22'   (Elecfreak 2.2\")"
-    echo "  'jb35'     (JBTek 3.5\")"
-    echo "  'sain32'   (Sainsmart 3.2\")"
+##    echo "  'elec22'   (Elecfreak 2.2\")"
+##    echo "  'jb35'     (JBTek 3.5\")"
+##    echo "  'sain32'   (Sainsmart 3.2\")"
     echo "  'wave32'   (Waveshare 3.2\")"
     echo "  'wave35'   (Waveshare 3.5\")"
     echo
