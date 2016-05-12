@@ -444,6 +444,12 @@ fi
 
 # update_bootprefs || bail "Unable to set boot preferences"
 
+if [ "${pitfttype}" == "elec22" ] || [ "${pitfttype}" == "jb35" ] || [ "${pitfttype}" == "sain32" ]; then
+    echo "Your screen is configured for console use"
+    echo "To output X on this screen, manual editing of some configuration files"
+    echo "according to the manufacturers instructions might be required."
+fi
+
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
 
