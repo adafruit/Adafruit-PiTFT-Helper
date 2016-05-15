@@ -457,3 +457,11 @@ info PITFT "Notes:"
 echo "Please don't run rpi-update, or you'll have to re-install a kernel"
 echo "with PiTFT support.  For more info, see:"
 echo "https://whitedome.com.au/kali-pi"
+echo
+echo
+read -p "Reboot to apply changes? (y/n): " -n 1 -r
+echo
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  reboot
+fi
