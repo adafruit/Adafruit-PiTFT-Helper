@@ -3,7 +3,8 @@
 set -e
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.8.0"
+    echo "Re4son Pi-TFT Setup v0.1.0"
+    echo "Based on Adafruit PiTFT Helper v0.8.0"
     exit 1
 }
 
@@ -12,13 +13,22 @@ function print_help() {
     echo "    -h            Print this help"
     echo "    -v            Print version information"
     echo "    -u [homedir]  Specify path of primary user's home directory (defaults to /home/pi)"
-    echo "    -t [type]     Specify the type of PiTFT: '28r' (PID 1601) or '28c' (PID 1983) or '35r' or '22'"
+    echo "    -t [type]     Specify the type of TFT:"
+    echo "                                             '28r'      (Adafruit 2.8\" PID 1601)"
+    echo "                                             '28c'      (Adafruit 2.8\" PID 1983)"
+    echo "                                             '35r'      (Adafruit 3.5\")"
+    echo "                                             '22'       (Adafruit 2.2\")"
+    echo "                                             'elec22'   (Elecfreak 2.2\")"
+    echo "                                             'jb35'     (JBTek 3.5\")"
+    echo "                                             'sain32'   (Sainsmart 3.2\")"
+    echo "                                             'wave32'   (Waveshare 3.2\")"
+    echo "                                             'wave35'   (Waveshare 3.5\")"
     echo
     echo "You must specify a type of display."
     exit 1
 }
 
-group=ADAFRUIT
+group=RE4SON
 function info() {
     system="$1"
     group="${system}"
@@ -74,8 +84,8 @@ function ask() {
 # update /boot/config.txt with appropriate values
 function update_configtxt() {
 
-    if grep -q "adafruit-pitft-helper" "/boot/config.txt"; then
-        echo "Already have an adafruit-pitft-helper section in /boot/config.txt."
+    if grep -q "pi-tft" "/boot/config.txt"; then
+        echo "Already have a tft-setup section in /boot/config.txt."
         echo "Adding new section, but please run:"
         echo "sudo nano /boot/config.txt"
         echo "...and remove any duplicate sections."
@@ -97,12 +107,28 @@ function update_configtxt() {
     if [ "${pitfttype}" == "35r" ]; then
         overlay="dtoverlay=pitft35r,rotate=90,speed=42000000,fps=20"
     fi
+    
+    if [ "${pitfttype}" == "elec22" ]; then
+        overlay="dtoverlay=elec22"
+    fi
+    if [ "${pitfttype}" == "jb35" ]; then
+        overlay="dtoverlay=jbtek"
+    fi
+    if [ "${pitfttype}" == "sain32" ]; then
+        overlay="dtoverlay=sainsmart32"
+    fi
+    if [ "${pitfttype}" == "wave32" ]; then
+        overlay="dtoverlay=waveshare32b:rotate=270"
+    fi
+    if [ "${pitfttype}" == "wave35" ]; then
+        overlay="dtoverlay=waveshare35a:rotate=270"
+    fi
 
     date=`date`
 
     cat >> /boot/config.txt <<EOF
 
-# --- added by adafruit-pitft-helper $date ---
+# --- added by re4son-pi-tft-setup $date ---
 [pi1]
 device_tree=bcm2708-rpi-b-plus.dtb
 [pi2]
@@ -112,7 +138,7 @@ dtparam=spi=on
 dtparam=i2c1=on
 dtparam=i2c_arm=on
 $overlay
-# --- end adafruit-pitft-helper $date ---
+# --- end re4son-pi-tft-setup $date ---
 EOF
 
 }
@@ -159,6 +185,26 @@ Section "InputClass"
          Option "SwapAxes" "1"
          Option "InvertY" "1"
          Option "Calibration" "0 320 0 240"
+EndSection
+EOF
+    fi
+    if [ "${pitfttype}" == "wave32" ]; then
+        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+Section "InputClass"
+         Identifier "calibration"
+         MatchProduct "ADS7846 Touchscreen"
+         Option "SwapAxes" "1"
+         Option "Calibration" "160 3723 3896 181"
+EndSection
+EOF
+    fi
+    if [ "${pitfttype}" == "wave35" ]; then
+        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+Section "InputClass"
+         Identifier "calibration"
+         MatchProduct "ADS7846 Touchscreen"
+         Option "SwapAxes" "1"
+         Option "Calibration" "160 3723 3896 181"
 EndSection
 EOF
     fi
@@ -318,7 +364,7 @@ do
 done
 
 if [[ $EUID -ne 0 ]]; then
-    bail "adafruit-pitft-helper must be run as root. try: sudo adadfruit-pitft-helper"
+    bail "re4son-pi-tft-setup must be run as root. try: sudo re4son-pi-tft-setup"
 fi
 
 # check init system (technique borrowed from raspi-config):
@@ -348,17 +394,22 @@ if [[ ! -e "$target_homedir" || ! -d "$target_homedir" ]]; then
     bail "$target_homedir must be an existing directory (use -u /home/foo to specify)"
 fi
 
-if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]; then
+if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ] && [ "${pitfttype}" != "elec22" ] && [ "${pitfttype}" != "jb35" ] && [ "${pitfttype}" != "sain32" ] && [ "${pitfttype}" != "wave32" ] && [ "${pitfttype}" != "wave35" ]; then
     echo "Type must be one of:"
-    echo "  '28r' (2.8\" resistive, PID 1601)"
-    echo "  '28c' (2.8\" capacitive, PID 1983)"
-    echo "  '35r' (3.5\" Resistive)"
-    echo "  '22'  (2.2\" no touch)"
+    echo "  '28r'      (Adafruit 2.8\" resistive, PID 1601)"
+    echo "  '28c'      (Adafruit 2.8\" capacitive, PID 1983)"
+    echo "  '35r'      (Adafruit 3.5\" Resistive)"
+    echo "  '22'       (Adafruit 2.2\" no touch)"
+    echo "  'elec22'   (Elecfreak 2.2\")"
+    echo "  'jb35'     (JBTek 3.5\")"
+    echo "  'sain32'   (Sainsmart 3.2\")"
+    echo "  'wave32'   (Waveshare 3.2\")"
+    echo "  'wave35'   (Waveshare 3.5\")"
     echo
     print_help
 fi
 
-info PITFT "Updating X11 default calibration..."
+info PITFT "Updating X11 default calibration, patched to work in Kali without breaking HDMI..."
 update_xorg || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
 
 info PITFT "Updating X11 setup tweaks..."
@@ -392,6 +443,12 @@ fi
 
 # update_bootprefs || bail "Unable to set boot preferences"
 
+if [ "${pitfttype}" == "elec22" ] || [ "${pitfttype}" == "jb35" ] || [ "${pitfttype}" == "sain32" ]; then
+    echo "Your screen is configured for console use"
+    echo "To output X on this screen, manual editing of some configuration files"
+    echo "according to the manufacturers instructions might be required."
+fi
+
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
 
@@ -399,4 +456,12 @@ info PITFT "Success!"
 info PITFT "Notes:"
 echo "Please don't run rpi-update, or you'll have to re-install a kernel"
 echo "with PiTFT support.  For more info, see:"
-echo "https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-raspberry-pi/faq"
+echo "https://whitedome.com.au/kali-pi"
+echo
+echo
+read -p "Reboot to apply changes? (y/n): " -n 1 -r
+echo
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  reboot
+fi
