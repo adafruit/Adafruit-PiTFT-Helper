@@ -87,7 +87,7 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "28r" ]; then
-        overlay="dtoverlay=pitft28r,rotate=90,speed=32000000,fps=20"
+        overlay="dtoverlay=pitft28-resistive,rotate=90,speed=32000000,fps=20"
     fi
 
     if [ "${pitfttype}" == "28c" ]; then
@@ -95,7 +95,7 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
-        overlay="dtoverlay=pitft35r,rotate=90,speed=42000000,fps=20"
+        overlay="dtoverlay=pitft35-resistive,rotate=90,speed=42000000,fps=20"
     fi
 
     date=`date`
@@ -122,7 +122,7 @@ function update_xorg() {
     mkdir -p /etc/X11/xorg.conf.d
 
     cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
-Section "Device" 
+Section "Device"
   Identifier "myfb"
   Driver "fbdev"
   Option "fbdev" "/dev/fb1"
@@ -211,7 +211,7 @@ EOF
 
     if [ "${pitfttype}" == "28c" ]; then
         cat > /etc/udev/rules.d/95-ft6206.rules <<EOF
-        SUBSYSTEM=="input", ATTRS{name}=="ft6x06_ts", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen" 
+        SUBSYSTEM=="input", ATTRS{name}=="ft6x06_ts", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
 EOF
     fi
 }
@@ -224,12 +224,59 @@ function install_console() {
         echo "/boot/cmdline.txt already updated"
     fi
     sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
+    cat > /etc/rc.local <<EOF
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+# Print the IP address
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  printf "My IP address is %s\n" "$_IP"
+fi
+
+# disable console blanking on PiTFT
+sudo sh -c "TERM=linux setterm -blank 0 >/dev/tty0"
+
+exit 0
+EOF
 }
 
 function uninstall_console() {
     sed -i 's/rootwait fbcon=map:10 fbcon=font:VGA8x8/rootwait/g' "/boot/cmdline.txt"
     sed -i 's/BLANK_TIME=0/BLANK_TIME=10/g' "/etc/kbd/config"
     echo "Screen blanking time reset to 10 minutes"
+    cat > /etc/rc.local <<EOF
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+# Print the IP address
+_IP=$(hostname -I) || true
+if [ "$_IP" ]; then
+  printf "My IP address is %s\n" "$_IP"
+fi
+
+exit 0
+EOF
 }
 
 function update_etcmodules() {
