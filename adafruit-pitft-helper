@@ -95,7 +95,7 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
-        overlay="dtoverlay=pitft35-resistive,rotate=270,speed=42000000,fps=20"
+        overlay="dtoverlay=pitft35-resistive,rotate=270,speed=25000000,fps=20"
     fi
 
     date=`date`
