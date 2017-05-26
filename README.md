@@ -2,6 +2,11 @@
 
 A script for configuring Adafruit's PiTFT displays on a Raspberry Pi.
 
+## Attention RETROPIE Users:
+
+Do not use the adafruit-pitft-helper script with RetroPie. Instead, follow the directions on this page:
+https://learn.adafruit.com/running-opengl-based-games-and-emulators-on-adafruit-pitft-displays/pitft-setup
+
 ## PiTFT Documentation
 
 Products:
