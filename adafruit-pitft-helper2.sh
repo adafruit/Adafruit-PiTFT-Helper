@@ -9,7 +9,7 @@ fi
 
 UPDATE_DB=false
 
-
+############################ Script assisters ############################
 
 # Given a list of strings representing options, display each option
 # preceded by a number (1 to N), display a prompt, check input until
@@ -29,26 +29,6 @@ selectN() {
 		fi
 	done
 }
-
-
-clear
-echo "This script downloads and installs"
-echo "retrogame, a GPIO-to-keypress utility"
-echo "for adding buttons and joysticks, plus"
-echo "one of several configuration files."
-echo "Run time <1 minute. Reboot recommended."
-echo
-
-echo "Select configuration:"
-selectN "PiTFT 2.8 inch resistive" \
-        "PiTFT 2.2 inch no touch" \
-        "Quit without installing"
-PITFT_SELECT=$?
-PITFT_TYPES=("28r" "22")
-
-if [ $PITFT_SELECT -gt 2 ]; then
-    exit 1
-fi
 
 
 function print_version() {
@@ -120,9 +100,45 @@ function ask() {
     done
 }
 
+
+progress() {
+    count=0
+    until [ $count -eq $1 ]; do
+        echo -n "..." && sleep 1
+        ((count++))
+    done
+    echo
+}
+
+sysupdate() {
+    if ! $UPDATE_DB; then
+        echo "Updating apt indexes..." && progress 3 &
+        sudo apt-get update 1> /dev/null || { warning "Apt failed to update indexes!" && exit 1; }
+        echo "Reading package lists..."
+        progress 3 && UPDATE_DB=true
+    fi
+}
+
+############################ Sub-Scripts ############################
+
+function softwareinstall() {
+    echo "Installing Pre-requisite Software...This may take a few minutes!" 
+    apt-get install -y fbi git python-pip python-smbus python-spidev evtest tslib libts-bin 1> /dev/null  || { warning "Apt failed to install software!" && exit 1; }
+    pip install evdev 1> /dev/null  || { warning "Pip failed to install software!" && exit 1; }
+}
+
+function overlayinstall() {
+    if [ -e /boot/overlays/pitft2x-notouch-overlay.dtbo ]; then
+		echo "pitft2x-notouch-overlay already exists. Skipping!"
+    else
+	cd ${target_homedir}
+	curl -sLO https://github.com/adafruit/Adafruit_Userspace_PiTFT/raw/master/pitft2x-notouch-overlay.dtbo
+	mv pitft2x-notouch-overlay.dtbo /boot/overlays/
+    fi
+}
+
 # update /boot/config.txt with appropriate values
 function update_configtxt() {
-
     if grep -q "adafruit-pitft-helper" "/boot/config.txt"; then
         echo "Already have an adafruit-pitft-helper section in /boot/config.txt."
 	echo "Removing old section..."
@@ -159,8 +175,80 @@ dtparam=i2c_arm=on
 $overlay
 # --- end adafruit-pitft-helper $date ---
 EOF
-
 }
+
+function touchmouseinstall() {
+    cd ${target_homedir}
+    echo "Downloading touchmouse.py"
+    curl -sLO https://raw.githubusercontent.com/adafruit/Adafruit_Userspace_PiTFT/master/touchmouse.py
+    echo "Adding touchmouse.py to /etc/rc.local"
+    # removing any old version
+    sed -i -e "/^sudo python.*touchmouse.py.*/d" /etc/rc.local
+    sed -i -e "s|exit 0|sudo python $target_homedir/touchmouse.py \&\\nexit 0|" /etc/rc.local
+}
+
+function update_udev() {
+    cat > /etc/udev/rules.d/95-touchmouse.rules <<EOF
+    SUBSYSTEM=="input", ATTRS{name}=="touchmouse", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
+EOF
+}
+
+# currently for '90' rotation only
+function update_pointercal() {
+    if [ "${pitfttype}" == "28r" ]; then
+        cat > /etc/pointercal <<EOF
+27 -5850 21648962 4179 -16 -836686 6553636
+EOF
+    fi
+
+    if [ "${pitfttype}" == "35r" ]; then
+        cat > /etc/pointercal <<EOF
+8 -8432 32432138 5699 -112 -965922 65536
+EOF
+    fi
+
+    if [ "${pitfttype}" == "28c" ]; then
+        cat > /etc/pointercal <<EOF
+320 65536 0 -65536 0 15728640 65536
+EOF
+    fi
+}
+
+
+function install_console() {
+    if ! grep -q 'fbcon=map:10 fbcon=font:VGA8x8' /boot/cmdline.txt; then
+        echo "Updating /boot/cmdline.txt"
+        sed -i 's/rootwait/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
+    else
+        echo "/boot/cmdline.txt already updated"
+    fi
+
+    echo "Turning off console blanking"
+    # pre-stretch this is what you'd do:
+    if [ -e /etc/kbd/config]; then
+      sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
+    fi
+    # as of stretch....
+    # removing any old version
+    sed -i -e '/^sudo sh -c "TERM=linux setterm -blank.*/d' /etc/rc.local
+    sed -i -e "s|exit 0|# disable console blanking on PiTFT\\nsudo sh -c \"TERM=linux setterm -blank 0 >/dev/tty0\"\\nexit 0|" /etc/rc.local
+}
+
+
+function uninstall_console() {
+    echo "Removing console fbcon map from /boot/cmdline.txt"
+    sed -i 's/rootwait fbcon=map:10 fbcon=font:VGA8x8/rootwait/g' "/boot/cmdline.txt"
+    echo "Screen blanking time reset to 10 minutes"
+    if [ -e "/etc/kbd/config" ]; then
+      sed -i 's/BLANK_TIME=0/BLANK_TIME=10/g' "/etc/kbd/config"
+    fi
+    sed -i -e '/^sudo sh -c "TERM=linux.*/d' /etc/rc.local
+}
+
+
+
+############### unused
+
 
 # currently for '90' rotation only
 function update_xorg() {
@@ -226,104 +314,6 @@ EOF
     fi
 }
 
-# currently for '90' rotation only
-function update_pointercal() {
-    if [ "${pitfttype}" == "28r" ]; then
-        cat > /etc/pointercal <<EOF
--30 -5902 22077792 4360 -105 -1038814 65536
-EOF
-    fi
-
-    if [ "${pitfttype}" == "35r" ]; then
-        cat > /etc/pointercal <<EOF
-8 -8432 32432138 5699 -112 -965922 65536
-EOF
-    fi
-
-    if [ "${pitfttype}" == "28c" ]; then
-        cat > /etc/pointercal <<EOF
-320 65536 0 -65536 0 15728640 65536
-EOF
-    fi
-}
-
-function update_udev() {
-    if [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
-        cat > /etc/udev/rules.d/95-stmpe.rules <<EOF
-        SUBSYSTEM=="input", ATTRS{name}=="stmpe-ts", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
-EOF
-    fi
-
-    if [ "${pitfttype}" == "28c" ]; then
-        cat > /etc/udev/rules.d/95-ft6206.rules <<EOF
-        SUBSYSTEM=="input", ATTRS{name}=="ft6x06_ts", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
-EOF
-    fi
-}
-
-function install_console() {
-    if ! grep -q 'fbcon=map:10 fbcon=font:VGA8x8' /boot/cmdline.txt; then
-        echo "Updating /boot/cmdline.txt"
-        sed -i 's/rootwait/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
-    else
-        echo "/boot/cmdline.txt already updated"
-    fi
-    sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
-    cat > /etc/rc.local <<EOF
-#!/bin/sh -e
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will "exit 0" on success or any other
-# value on error.
-#
-# In order to enable or disable this script just change the execution
-# bits.
-#
-# By default this script does nothing.
-
-# Print the IP address
-_IP=$(hostname -I) || true
-if [ "$_IP" ]; then
-  printf "My IP address is %s\n" "$_IP"
-fi
-
-# disable console blanking on PiTFT
-sudo sh -c "TERM=linux setterm -blank 0 >/dev/tty0"
-
-exit 0
-EOF
-}
-
-function uninstall_console() {
-    sed -i 's/rootwait fbcon=map:10 fbcon=font:VGA8x8/rootwait/g' "/boot/cmdline.txt"
-    sed -i 's/BLANK_TIME=0/BLANK_TIME=10/g' "/etc/kbd/config"
-    echo "Screen blanking time reset to 10 minutes"
-    cat > /etc/rc.local <<EOF
-#!/bin/sh -e
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will "exit 0" on success or any other
-# value on error.
-#
-# In order to enable or disable this script just change the execution
-# bits.
-#
-# By default this script does nothing.
-
-# Print the IP address
-_IP=$(hostname -I) || true
-if [ "$_IP" ]; then
-  printf "My IP address is %s\n" "$_IP"
-fi
-
-exit 0
-EOF
-}
-
 function update_etcmodules() {
     if [ "${pitfttype}" == "28c" ]; then
         ts_module="ft6x06_ts"
@@ -375,44 +365,29 @@ function update_bootprefs() {
       fi
     fi
 }
-
-progress() {
-    count=0
-    until [ $count -eq $1 ]; do
-        echo -n "..." && sleep 1
-        ((count++))
-    done
-    echo
-}
-
-sysupdate() {
-    if ! $UPDATE_DB; then
-        echo "Updating apt indexes..." && progress 3 &
-        sudo apt-get update 1> /dev/null || { warning "Apt failed to update indexes!" && exit 1; }
-        echo "Reading package lists..."
-        progress 3 && UPDATE_DB=true
-    fi
-}
-
-softwareinstall() {
-    echo "Installing Pre-requisite Software...This may take a few minutes!" 
-    apt-get install -y fbi git python-pip python-smbus python-spidev evtest tslib libts-bin 1> /dev/null  || { warning "Apt failed to install software!" && exit 1; }
-    pip install evdev 1> /dev/null  || { warning "Pip failed to install software!" && exit 1; }
-}
-
-overlayinstall() {
-    if [ -e /boot/overlays/pitft2x-notouch-overlay.dtbo ]; then
-		echo "pitft2x-notouch-overlay already exists. Skipping!"
-    else
-	cd ${target_homedir}
-	curl -sLO https://github.com/adafruit/Adafruit_Userspace_PiTFT/raw/master/pitft2x-notouch-overlay.dtbo
-	mv pitft2x-notouch-overlay.dtbo /boot/overlays/
-    fi
-}
-
-# MAIN
-
+####################################################### MAIN
 target_homedir="/home/pi"
+
+
+clear
+echo "This script downloads and installs"
+echo "retrogame, a GPIO-to-keypress utility"
+echo "for adding buttons and joysticks, plus"
+echo "one of several configuration files."
+echo "Run time <1 minute. Reboot recommended."
+echo
+
+echo "Select configuration:"
+selectN "PiTFT 2.8 inch resistive" \
+        "PiTFT 2.2 inch no touch" \
+        "Quit without installing"
+PITFT_SELECT=$?
+PITFT_TYPES=("28r" "22")
+
+if [ $PITFT_SELECT -gt 2 ]; then
+    exit 1
+fi
+
 
 args=$(getopt -uo 'hvri:o:b:u:' -- $*)
 [ $? != 0 ] && print_help
@@ -489,26 +464,34 @@ overlayinstall || bail "Unable to install overlay"
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
 
+if [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
+   info PITFT "Installing touchscreen..."
+   touchmouseinstall || bail "Unable to install touch mouse script"
+
+   info PITFT "Updating SysFS rules for Touchscreen..."
+   update_udev || bail "Unable to update /etc/udev/rules.d"
+
+   info PITFT "Updating TSLib default calibration..."
+   update_pointercal || bail "Unable to update /etc/pointercal"
+fi
+
+# ask for console access
+if ask "Would you like the console to appear on the PiTFT display?"; then
+    info PITFT "Updating console to PiTFT..."
+    install_console || bail "Unable to configure console"
+else
+    info PITFT "Making sure console doesn't use PiTFT"
+    uninstall_console || bail "Unable to configure console"
+fi
+
 #info PITFT "Updating X11 default calibration..."
 #update_xorg || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
 
 #info PITFT "Updating X11 setup tweaks..."
 #update_x11profile || bail "Unable to update X11 setup"
 
-#info PITFT "Updating TSLib default calibration..."
-#update_pointercal || bail "Unable to update /etc/pointercal"
 
-#info PITFT "Updating SysFS rules for Touchscreen..."
-#update_udev || bail "Unable to update /etc/udev/rules.d"
 
-# ask for console access
-#if ask "Would you like the console to appear on the PiTFT display?"; then
-#    info PITFT "Updating console to PiTFT..."
-#    install_console || bail "Unable to configure console"
-#else
-#    info PITFT "Making sure console doesn't use PiTFT"
-#    uninstall_console || bail "Unable to configure console"
-#fi
 
 #info PITFT "Updating /etc/modules..."
 #update_etcmodules || bail "Unable to update /etc/modules"
