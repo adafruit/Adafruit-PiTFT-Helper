@@ -506,10 +506,10 @@ if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}
 fi
 
 info PITFT "System update"
-#sysupdate || bail "Unable to apt-get update"
+sysupdate || bail "Unable to apt-get update"
 
 info PITFT "Installing Python libraries & Software..."
-#softwareinstall || bail "Unable to install software"
+softwareinstall || bail "Unable to install software"
 
 info PITFT "Installing Device Tree Overlay..."
 overlayinstall || bail "Unable to install overlay"
