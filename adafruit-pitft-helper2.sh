@@ -213,7 +213,7 @@ EOF
 function update_pointercal() {
     if [ "${pitfttype}" == "28r" ]; then
         cat > /etc/pointercal <<EOF
--13 -5767 21475040 4342 83 -1357256 65536
+33 -5782 21364572 4221 35 -1006432 65536
 EOF
     fi
 
