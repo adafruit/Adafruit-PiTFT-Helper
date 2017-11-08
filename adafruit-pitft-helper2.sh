@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# cd ~
+# wget https://raw.githubusercontent.com/adafruit/Adafruit-PiTFT-Helper/master/adafruit-pitft-helper2.sh
+# chmod +x adafruit-pitft-helper2.sh
+# sudo ./adafruit-pitft-helper2.sh
+
 if [ $(id -u) -ne 0 ]; then
 	echo "Installer must be run as root."
 	echo "Try 'sudo bash $0'"
@@ -205,7 +210,7 @@ function touchmouseinstall() {
 
 function update_udev() {
     cat > /etc/udev/rules.d/95-touchmouse.rules <<EOF
-    SUBSYSTEM=="input", ATTRS{name}=="touchmouse", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
+SUBSYSTEM=="input", ATTRS{name}=="touchmouse", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
 EOF
 }
 
@@ -327,7 +332,7 @@ Section "InputClass"
         MatchProduct "touchmouse"
         MatchDevicePath "/dev/input/event*"
         Driver "libinput"
-        Option "TransformationMatrix" "0.024710 -1.098824 1.013750 1.113069 -0.$
+        Option "TransformationMatrix" "0.024710 -1.098824 1.013750 1.113069 -0.008984 -0.069884 0 0 1"
 EndSection
 EOF
     fi
