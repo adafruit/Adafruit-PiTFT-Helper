@@ -119,6 +119,22 @@ sysupdate() {
     fi
 }
 
+
+# Given a filename, a regex pattern to match and a replacement string,
+# perform replacement if found, else append replacement to end of file.
+# (# $1 = filename, $2 = pattern to match, $3 = replacement)
+reconfig() {
+	grep $2 $1 >/dev/null
+	if [ $? -eq 0 ]; then
+		# Pattern found; replace in file
+		sed -i "s/$2/$3/g" $1 >/dev/null
+	else
+		# Not found; append (silently)
+		echo $3 | sudo tee -a $1 >/dev/null
+	fi
+}
+
+
 ############################ Sub-Scripts ############################
 
 function softwareinstall() {
@@ -152,7 +168,7 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "28r" ]; then
-        overlay="dtoverlay=pitft2x-notouch-overlay,rotate=90,speed=32000000,fps=30"
+        overlay="dtoverlay=pitft2x-notouch-overlay,rotate=90,speed=64000000,fps=30"
     fi
 
     date=`date`
@@ -197,7 +213,7 @@ EOF
 function update_pointercal() {
     if [ "${pitfttype}" == "28r" ]; then
         cat > /etc/pointercal <<EOF
-27 -5850 21648962 4179 -16 -836686 6553636
+21766410 -6 -5873 -799880 4215 -11 65536
 EOF
     fi
 
@@ -225,13 +241,23 @@ function install_console() {
 
     echo "Turning off console blanking"
     # pre-stretch this is what you'd do:
-    if [ -e /etc/kbd/config]; then
+    if [ -e /etc/kbd/config ]; then
       sed -i 's/BLANK_TIME=.*/BLANK_TIME=0/g' "/etc/kbd/config"
     fi
     # as of stretch....
     # removing any old version
+    sed -i -e '/^# disable console blanking.*/d' /etc/rc.local
     sed -i -e '/^sudo sh -c "TERM=linux setterm -blank.*/d' /etc/rc.local
     sed -i -e "s|exit 0|# disable console blanking on PiTFT\\nsudo sh -c \"TERM=linux setterm -blank 0 >/dev/tty0\"\\nexit 0|" /etc/rc.local
+
+    reconfig /etc/default/console-setup "^.*FONTFACE.*$" "FONTFACE=\"Terminus\""
+    reconfig /etc/default/console-setup "^.*FONTSIZE.*$" "FONTSIZE=\"6x12\""
+
+    echo "Setting raspi-config to boot to console w/o login..."
+    raspi-config nonint do_boot_behaviour B2
+
+    # remove fbcp
+    sed -i -e "/^.*fbcp.*$/d" /etc/rc.local
 }
 
 
@@ -242,33 +268,65 @@ function uninstall_console() {
     if [ -e "/etc/kbd/config" ]; then
       sed -i 's/BLANK_TIME=0/BLANK_TIME=10/g' "/etc/kbd/config"
     fi
+    sed -i -e '/^# disable console blanking.*/d' /etc/rc.local
     sed -i -e '/^sudo sh -c "TERM=linux.*/d' /etc/rc.local
+}
+
+function install_fbcp() {
+    echo "Installing cmake..."
+    apt-get --yes --force-yes install cmake 1> /dev/null  || { warning "Apt failed to install software!" && exit 1; }
+    echo "Downloading rpi-fbcp..."
+    cd /tmp
+    curl -sLO https://github.com/tasanakorn/rpi-fbcp/archive/master.zip
+    echo "Uncompressing rpi-fbcp..."
+    rm -rf /tmp/rpi-fbcp-master
+    unzip master.zip 1> /dev/null  || { warning "Failed to uncompress fbcp!" && exit 1; }
+    cd rpi-fbcp-master
+    mkdir build
+    cd build
+    echo "Building rpi-fbcp..."
+    cmake ..  1> /dev/null  || { warning "Failed to cmake fbcp!" && exit 1; }
+    make  1> /dev/null  || { warning "Failed to make fbcp!" && exit 1; }
+    echo "Installing rpi-fbcp..."
+    install fbcp /usr/local/bin/fbcp
+    rm -rf /tmp/rpi-fbcp-master
+
+    # Add fbcp to /rc.local:
+    echo "Add fbcp to /etc/rc.local..."
+    grep fbcp /etc/rc.local >/dev/null
+    if [ $? -eq 0 ]; then
+	# fbcp already in rc.local, but make sure correct:
+	sed -i "s|^.*fbcp.*$|/usr/local/bin/fbcp \&|g" /etc/rc.local >/dev/null
+    else
+	#Insert fbcp into rc.local before final 'exit 0'
+	sed -i "s|^exit 0|/usr/local/bin/fbcp \&\\nexit 0|g" /etc/rc.local >/dev/null
+    fi
+    echo "Setting raspi-config to boot to desktop w/o login..."
+    raspi-config nonint do_boot_behaviour B4
+
+    # Disable overscan compensation (use full screen):
+    raspi-config nonint do_overscan 1
+    # Set up HDMI parameters:
+    echo "Configuring boot/config.txt for forced HDMI"
+    reconfig /boot/config.txt "^.*hdmi_force_hotplug.*$" "hdmi_force_hotplug=1"
+    reconfig /boot/config.txt "^.*hdmi_group.*$" "hdmi_group=2"
+    reconfig /boot/config.txt "^.*hdmi_mode.*$" "hdmi_mode=87"
+    reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
 }
 
 
 
-############### unused
 
 
 # currently for '90' rotation only
 function update_xorg() {
-    mkdir -p /etc/X11/xorg.conf.d
-
-    cat > /etc/X11/xorg.conf.d/99-fbdev.conf <<EOF
-Section "Device"
-  Identifier "myfb"
-  Driver "fbdev"
-  Option "fbdev" "/dev/fb1"
-EndSection
-EOF
-
     if [ "${pitfttype}" == "28r" ]; then
-        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+        cat > /usr/share/X11/xorg.conf.d/20-calibration.conf <<EOF
 Section "InputClass"
-        Identifier      "calibration"
-        MatchProduct    "stmpe-ts"
-        Option  "Calibration"   "3800 200 200 3800"
-        Option  "SwapAxes"      "1"
+        Identifier "Touchscreen Calibration"
+        MatchDevicePath "/dev/input/touchscreen"
+        Driver "libinput"
+        Option "TransformationMatrix" "0.024710 -1.098824 1.013750 1.113069 -0.008984 -0.069884 0 0 1"
 EndSection
 EOF
     fi
@@ -296,6 +354,9 @@ EndSection
 EOF
     fi
 }
+
+############### unused
+
 
 function update_x11profile() {
     fbturbo_path="/usr/share/X11/xorg.conf.d/99-fbturbo.conf"
@@ -353,28 +414,16 @@ EOF
     fi
 }
 
-function update_bootprefs() {
-    echo "Turning off boot-to-desktop"
-    if [ -e /etc/init.d/lightdm ]; then
-      if [ $SYSTEMD -eq 1 ]; then
-        systemctl set-default multi-user.target
-        ln -fs /lib/systemd/system/getty@.service /etc/systemd/system/getty.target.wants/getty@tty1.service
-      else
-        update-rc.d lightdm disable 2
-        sed /etc/inittab -i -e "s/1:2345:respawn:\/bin\/login -f pi tty1 <\/dev\/tty1 >\/dev\/tty1 2>&1/1:2345:respawn:\/sbin\/getty --noclear 38400 tty1/"
-      fi
-    fi
-}
 ####################################################### MAIN
 target_homedir="/home/pi"
 
 
 clear
 echo "This script downloads and installs"
-echo "retrogame, a GPIO-to-keypress utility"
-echo "for adding buttons and joysticks, plus"
+echo "PiTFT Support using userspace touch"
+echo "controls and a DTO for display drawing."
 echo "one of several configuration files."
-echo "Run time <1 minute. Reboot recommended."
+echo "Run time of up to 5 minutes. Reboot required!"
 echo
 
 echo "Select configuration:"
@@ -382,11 +431,15 @@ selectN "PiTFT 2.8 inch resistive" \
         "PiTFT 2.2 inch no touch" \
         "Quit without installing"
 PITFT_SELECT=$?
-PITFT_TYPES=("28r" "22")
-
 if [ $PITFT_SELECT -gt 2 ]; then
     exit 1
 fi
+
+PITFT_TYPES=("28r" "22")
+WIDTH_VALUES=(640 640 320 480)
+HEIGHT_VALUES=(480 480 240 320)
+HZ_VALUES=(80000000 80000000 80000000 32000000)
+
 
 
 args=$(getopt -uo 'hvri:o:b:u:' -- $*)
@@ -482,19 +535,19 @@ if ask "Would you like the console to appear on the PiTFT display?"; then
 else
     info PITFT "Making sure console doesn't use PiTFT"
     uninstall_console || bail "Unable to configure console"
+
+    if ask "Would you like the PIXEL desktop to appear on the PiTFT display?"; then
+	info PITFT "Adding FBCP support for PIXEL..."
+	install_fbcp || bail "Unable to configure fbcp"
+
+        info PITFT "Updating X11 default calibration..."
+	update_xorg || bail "Unable to update calibration"
+    fi
 fi
 
-#info PITFT "Updating X11 default calibration..."
-#update_xorg || bail "Unable to update /etc/X11/xorg.conf.d/99-calibration.conf"
 
 #info PITFT "Updating X11 setup tweaks..."
 #update_x11profile || bail "Unable to update X11 setup"
-
-
-
-
-#info PITFT "Updating /etc/modules..."
-#update_etcmodules || bail "Unable to update /etc/modules"
 
 #if [ "${pitfttype}" != "35r" ]; then
 #    # ask for 'on/off' button
@@ -508,7 +561,5 @@ fi
 
 
 info PITFT "Success!"
-info PITFT "Notes:"
-#echo "Please don't run rpi-update, or you'll have to re-install a kernel"
-#echo "with PiTFT support.  For more info, see:"
-#echo "https://learn.adafruit.com/adafruit-pitft-28-inch-resistive-touchscreen-display-raspberry-pi/faq"
+info PITFT "Notes: Please reboot to set all changed!"
+
