@@ -323,10 +323,11 @@ function update_xorg() {
     if [ "${pitfttype}" == "28r" ]; then
         cat > /usr/share/X11/xorg.conf.d/20-calibration.conf <<EOF
 Section "InputClass"
-        Identifier "Touchscreen Calibration"
-        MatchDevicePath "/dev/input/touchscreen"
+        Identifier "Touchmouse Calibration"
+        MatchProduct "touchmouse"
+        MatchDevicePath "/dev/input/event*"
         Driver "libinput"
-        Option "TransformationMatrix" "0.024710 -1.098824 1.013750 1.113069 -0.008984 -0.069884 0 0 1"
+        Option "TransformationMatrix" "0.024710 -1.098824 1.013750 1.113069 -0.$
 EndSection
 EOF
     fi
