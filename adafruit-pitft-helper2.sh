@@ -200,7 +200,7 @@ function touchmouseinstall() {
     echo "Adding touchmouse.py to /etc/rc.local"
     # removing any old version
     sed -i -e "/^sudo python.*touchmouse.py.*/d" /etc/rc.local
-    sed -i -e "s|exit 0|sudo python $target_homedir/touchmouse.py \&\\nexit 0|" /etc/rc.local
+    sed -i -e "s|^exit 0|sudo python $target_homedir/touchmouse.py \&\\nexit 0|" /etc/rc.local
 }
 
 function update_udev() {
@@ -248,7 +248,7 @@ function install_console() {
     # removing any old version
     sed -i -e '/^# disable console blanking.*/d' /etc/rc.local
     sed -i -e '/^sudo sh -c "TERM=linux setterm -blank.*/d' /etc/rc.local
-    sed -i -e "s|exit 0|# disable console blanking on PiTFT\\nsudo sh -c \"TERM=linux setterm -blank 0 >/dev/tty0\"\\nexit 0|" /etc/rc.local
+    sed -i -e "s|^exit 0|# disable console blanking on PiTFT\\nsudo sh -c \"TERM=linux setterm -blank 0 >/dev/tty0\"\\nexit 0|" /etc/rc.local
 
     reconfig /etc/default/console-setup "^.*FONTFACE.*$" "FONTFACE=\"Terminus\""
     reconfig /etc/default/console-setup "^.*FONTSIZE.*$" "FONTSIZE=\"6x12\""
