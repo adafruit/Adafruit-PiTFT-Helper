@@ -37,7 +37,7 @@ selectN() {
 
 
 function print_version() {
-    echo "Adafruit PiTFT Helper v0.9.0"
+    echo "Adafruit PiTFT Helper v2.0.0"
     exit 1
 }
 
@@ -168,13 +168,17 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "22" ]; then
-        # formerly: options fbtft_device name=adafruit22a gpios=dc:25 rotate=270 frequency=32000000
-        overlay="dtoverlay=pitft22,rotate=270,speed=32000000,fps=20"
+        overlay="dtoverlay=pitft22,rotate=270,speed=64000000,fps=30"
     fi
 
     if [ "${pitfttype}" == "28r" ]; then
-        overlay="dtoverlay=pitft2x-notouch-overlay,rotate=90,speed=64000000,fps=30"
+        overlay="dtoverlay=pitft28-resistive,rotate=90,speed=64000000,fps=30"
     fi
+
+    if [ "${pitfttype}" == "35r" ]; then
+        overlay="dtoverlay=pitft35-resistive,rotate=270,speed=32000000,fps=20"
+    fi
+
 
     date=`date`
 
@@ -212,6 +216,9 @@ function update_udev() {
     cat > /etc/udev/rules.d/95-touchmouse.rules <<EOF
 SUBSYSTEM=="input", ATTRS{name}=="touchmouse", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
 EOF
+    cat > /etc/udev/rules.d/95-stmpe.rules <<EOF
+SUBSYSTEM=="input", ATTRS{name}=="*stmpe*", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
+EOF
 }
 
 # currently for '90' rotation only
@@ -224,7 +231,7 @@ EOF
 
     if [ "${pitfttype}" == "35r" ]; then
         cat > /etc/pointercal <<EOF
-8 -8432 32432138 5699 -112 -965922 65536
+70 -8400 32309812 5634 -27 -1166100 65536
 EOF
     fi
 
@@ -323,7 +330,9 @@ function install_fbcp() {
     # if there's X11 installed...
     if [ -e /etc/lightdm ]; then
 	echo "Using double resolution"
-	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]*2} ${HEIGHT_VALUES[PITFT_SELECT-1]*2} 60 1 0 0 0"
+	WIDTH=$(( WIDTH_VALUES[PITFT_SELECT-1] * 2))
+	HEIGHT=$(( HEIGHT_VALUES[PITFT_SELECT-1] * 2))
+	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH} ${HEIGHT} 60 1 0 0 0"
     else
 	echo "Using native resolution"
 	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
@@ -350,8 +359,8 @@ function update_xorg() {
     if [ "${pitfttype}" == "28r" ]; then
         cat > /usr/share/X11/xorg.conf.d/20-calibration.conf <<EOF
 Section "InputClass"
-        Identifier "Touchmouse Calibration"
-        MatchProduct "touchmouse"
+        Identifier "STMPE Touchscreen Calibration"
+        MatchProduct "stmpe"
         MatchDevicePath "/dev/input/event*"
         Driver "libinput"
         Option "TransformationMatrix" "0.024710 -1.098824 1.013750 1.113069 -0.008984 -0.069884 0 0 1"
@@ -360,12 +369,13 @@ EOF
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
-        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+        cat > /usr/share/X11/xorg.conf.d/20-calibration.conf <<EOF
 Section "InputClass"
-        Identifier      "calibration"
-        MatchProduct    "stmpe-ts"
-        Option  "Calibration"   "3800 120 200 3900"
-        Option  "SwapAxes"      "1"
+        Identifier "STMPE Touchscreen Calibration"
+        MatchProduct "stmpe"
+        MatchDevicePath "/dev/input/event*"
+        Driver "libinput"
+        Option "TransformationMatrix" "0.004374 -1.087174 1.023063 1.089687 -0.007586 -0.059126 0 0 1"
 EndSection
 EOF
     fi
@@ -379,65 +389,6 @@ Section "InputClass"
          Option "InvertY" "1"
          Option "Calibration" "0 320 0 240"
 EndSection
-EOF
-    fi
-}
-
-############### unused
-
-
-function update_x11profile() {
-    fbturbo_path="/usr/share/X11/xorg.conf.d/99-fbturbo.conf"
-    if [ -e $fbturbo_path ]; then
-        echo "Moving ${fbturbo_path} to ${target_homedir}"
-        mv "$fbturbo_path" "$target_homedir"
-    fi
-
-    if grep -xq "export FRAMEBUFFER=/dev/fb1" "${target_homedir}/.profile"; then
-        echo "Already had 'export FRAMEBUFFER=/dev/fb1'"
-    else
-        echo "Adding 'export FRAMEBUFFER=/dev/fb1'"
-        cat >> "${target_homedir}/.profile" <<EOF
-export FRAMEBUFFER=/dev/fb1
-EOF
-    fi
-}
-
-function update_etcmodules() {
-    if [ "${pitfttype}" == "28c" ]; then
-        ts_module="ft6x06_ts"
-    elif [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
-        ts_module="stmpe_ts"
-    else
-        return 0
-    fi
-
-    if grep -xq "$ts_module" "/etc/modules"; then
-        echo "Already had $ts_module"
-    else
-        echo "Adding $ts_module"
-        echo "$ts_module" >> /etc/modules
-    fi
-}
-
-function install_onoffbutton() {
-    echo "Adding rpi_power_switch to /etc/modules"
-    if grep -xq "rpi_power_switch" "${chr}/etc/modules"; then
-        echo "Already had rpi_power_switch"
-    else
-        echo "Adding rpi_power_switch"
-        cat >> /etc/modules <<EOF
-rpi_power_switch
-EOF
-    fi
-
-    echo "Adding rpi_power_switch config to /etc/modprobe.d/adafruit.conf"
-    if grep -xq "options rpi_power_switch gpio_pin=23 mode=0" "${chr}/etc/modprobe.d/adafruit.conf"; then
-        echo "Already had rpi_power_switch config"
-    else
-        echo "Adding rpi_power_switch"
-        cat >> /etc/modprobe.d/adafruit.conf <<EOF
-options rpi_power_switch gpio_pin=23 mode=0
 EOF
     fi
 }
@@ -456,14 +407,16 @@ echo
 
 echo "Select configuration:"
 selectN "PiTFT 2.4\", 2.8\" or 3.2\" resistive" \
-        "PiTFT 2.2 inch no touch" \
+        "PiTFT 2.2\" no touch (not working yet!)" \
+        "PiTFT 2.8\" capacitive touch (not working yet!)" \
+        "PiTFT 3.5\" resistive touch " \
         "Quit without installing"
 PITFT_SELECT=$?
-if [ $PITFT_SELECT -gt 2 ]; then
+if [ $PITFT_SELECT -gt 4 ]; then
     exit 1
 fi
 
-PITFT_TYPES=("28r" "22")
+PITFT_TYPES=("28r" "22" "28c" "35r")
 WIDTH_VALUES=(320 320 320 480)
 HEIGHT_VALUES=(240 240 240 320)
 HZ_VALUES=(80000000 80000000 80000000 32000000)
@@ -539,15 +492,15 @@ sysupdate || bail "Unable to apt-get update"
 info PITFT "Installing Python libraries & Software..."
 softwareinstall || bail "Unable to install software"
 
-info PITFT "Installing Device Tree Overlay..."
-overlayinstall || bail "Unable to install overlay"
+#info PITFT "Installing Device Tree Overlay..."
+#overlayinstall || bail "Unable to install overlay"
 
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
 
 if [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
-   info PITFT "Installing touchscreen..."
-   touchmouseinstall || bail "Unable to install touch mouse script"
+   #info PITFT "Installing touchscreen..."
+   #touchmouseinstall || bail "Unable to install touch mouse script"
 
    info PITFT "Updating SysFS rules for Touchscreen..."
    update_udev || bail "Unable to update /etc/udev/rules.d"
