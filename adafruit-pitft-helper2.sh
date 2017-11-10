@@ -141,7 +141,7 @@ reconfig() {
 
 function softwareinstall() {
     echo "Installing Pre-requisite Software...This may take a few minutes!" 
-    apt-get install -y fbi git python-pip python-smbus python-spidev evtest tslib libts-bin 1> /dev/null  || { warning "Apt failed to install software!" && exit 1; }
+    apt-get install -y bc fbi git python-pip python-smbus python-spidev evtest tslib libts-bin 1> /dev/null  || { warning "Apt failed to install software!" && exit 1; }
     pip install evdev 1> /dev/null  || { warning "Pip failed to install software!" && exit 1; }
 }
 
@@ -275,7 +275,7 @@ function install_fbcp() {
     echo "Downloading rpi-fbcp..."
     cd /tmp
     #curl -sLO https://github.com/tasanakorn/rpi-fbcp/archive/master.zip
-    curl -sLO https://github.com/PaintYourDragon/rpi-fbcp/archive/master.zip
+    curl -sLO https://github.com/adafruit/rpi-fbcp/archive/master.zip
     echo "Uncompressing rpi-fbcp..."
     rm -rf /tmp/rpi-fbcp-master
     unzip master.zip 1> /dev/null  || { warning "Failed to uncompress fbcp!" && exit 1; }
@@ -314,14 +314,21 @@ function install_fbcp() {
 
     # if there's X11 installed...
     if [ -e /etc/lightdm ]; then
-	echo "Using double resolution"
-	WIDTH=$(( WIDTH_VALUES[PITFT_SELECT-1] * 2))
-	HEIGHT=$(( HEIGHT_VALUES[PITFT_SELECT-1] * 2))
-	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH} ${HEIGHT} 60 1 0 0 0"
+	if [ "${pitfttype}" == "35r" ]; then
+	    echo "Using x1.5 resolution"
+	    SCALE=1.5
+	else
+	    echo "Using x2 resolution"
+	    SCALE=2.0
+	fi
     else
 	echo "Using native resolution"
-	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
+	SCALE=1
     fi
+    WIDTH=`python -c "print(int(${WIDTH_VALUES[PITFT_SELECT-1]} * ${SCALE}))"`
+    HEIGHT=`python -c "print(int(${HEIGHT_VALUES[PITFT_SELECT-1]} * ${SCALE}))"`
+    reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH} ${HEIGHT} 60 1 0 0 0"
+
 }
 
 function uninstall_fbcp() {
