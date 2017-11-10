@@ -237,6 +237,7 @@ EOF
 
 
 function install_console() {
+    echo "Set up main console turn on"
     if ! grep -q 'fbcon=map:10 fbcon=font:VGA8x8' /boot/cmdline.txt; then
         echo "Updating /boot/cmdline.txt"
         sed -i 's/rootwait/rootwait fbcon=map:10 fbcon=font:VGA8x8/g' "/boot/cmdline.txt"
@@ -327,12 +328,22 @@ function install_fbcp() {
 	echo "Using native resolution"
 	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
     fi
-
 }
 
+function uninstall_fbcp() {
+    # Remove fbcp from /etc/rc.local:
+    echo "Remove fbcp from /etc/rc.local..."
+    sed -i -e '/^.*fbcp.*$/d' /etc/rc.local
 
-
-
+    # Enable overscan compensation
+    raspi-config nonint do_overscan 0
+    # Set up HDMI parameters:
+    echo "Configuring boot/config.txt for default HDMI"
+    reconfig /boot/config.txt "^.*hdmi_force_hotplug.*$" "hdmi_force_hotplug=0"
+    sed -i -e '/^hdmi_group=2.*$/d' /boot/config.txt
+    sed -i -e '/^hdmi_mode=87.*$/d' /boot/config.txt
+    sed -i -e '/^hdmi_cvt=.*$/d' /boot/config.txt
+}
 
 # currently for '90' rotation only
 function update_xorg() {
@@ -548,6 +559,7 @@ fi
 # ask for console access
 if ask "Would you like the console to appear on the PiTFT display?"; then
     info PITFT "Updating console to PiTFT..."
+    uninstall_fbcp  || bail "Unable to uninstall fbcp"
     install_console || bail "Unable to configure console"
 else
     info PITFT "Making sure console doesn't use PiTFT"
