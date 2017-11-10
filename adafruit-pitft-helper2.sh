@@ -306,9 +306,11 @@ function install_fbcp() {
 	#Insert fbcp into rc.local before final 'exit 0'
 	sed -i "s|^exit 0|/usr/local/bin/fbcp \&\\nexit 0|g" /etc/rc.local >/dev/null
     fi
-    echo "Setting raspi-config to boot to desktop w/o login..."
-    raspi-config nonint do_boot_behaviour B4
-
+    # if there's X11 installed...
+    if [ -e /etc/lightdm ]; then
+	echo "Setting raspi-config to boot to desktop w/o login..."
+	raspi-config nonint do_boot_behaviour B4
+    fi
     # Disable overscan compensation (use full screen):
     raspi-config nonint do_overscan 1
     # Set up HDMI parameters:
@@ -433,7 +435,7 @@ echo "Run time of up to 5 minutes. Reboot required!"
 echo
 
 echo "Select configuration:"
-selectN "PiTFT 2.8 inch resistive" \
+selectN "PiTFT 2.4\", 2.8\" or 3.2\" resistive" \
         "PiTFT 2.2 inch no touch" \
         "Quit without installing"
 PITFT_SELECT=$?
@@ -542,12 +544,14 @@ else
     info PITFT "Making sure console doesn't use PiTFT"
     uninstall_console || bail "Unable to configure console"
 
-    if ask "Would you like the PIXEL desktop to appear on the PiTFT display?"; then
-	info PITFT "Adding FBCP support for PIXEL..."
+    if ask "Would you like the HDMI display to mirror to the PiTFT display?"; then
+	info PITFT "Adding FBCP support..."
 	install_fbcp || bail "Unable to configure fbcp"
 
-        info PITFT "Updating X11 default calibration..."
-	update_xorg || bail "Unable to update calibration"
+	if [ -e /etc/lightdm ]; then
+	    info PITFT "Updating X11 default calibration..."
+	    update_xorg || bail "Unable to update calibration"
+	fi
     fi
 fi
 
