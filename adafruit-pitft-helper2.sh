@@ -321,8 +321,10 @@ function install_fbcp() {
 
     # if there's X11 installed...
     if [ -e /etc/lightdm ]; then
+	echo "Using double resolution"
 	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]*2} ${HEIGHT_VALUES[PITFT_SELECT-1]*2} 60 1 0 0 0"
     else
+	echo "Using native resolution"
 	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
     fi
 
