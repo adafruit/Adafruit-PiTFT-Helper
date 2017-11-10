@@ -318,7 +318,14 @@ function install_fbcp() {
     reconfig /boot/config.txt "^.*hdmi_force_hotplug.*$" "hdmi_force_hotplug=1"
     reconfig /boot/config.txt "^.*hdmi_group.*$" "hdmi_group=2"
     reconfig /boot/config.txt "^.*hdmi_mode.*$" "hdmi_mode=87"
-    reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
+
+    # if there's X11 installed...
+    if [ -e /etc/lightdm ]; then
+	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]*2} ${HEIGHT_VALUES[PITFT_SELECT-1]*2} 60 1 0 0 0"
+    else
+	reconfig /boot/config.txt "^.*hdmi_cvt.*$" "hdmi_cvt=${WIDTH_VALUES[PITFT_SELECT-1]} ${HEIGHT_VALUES[PITFT_SELECT-1]} 60 1 0 0 0"
+    fi
+
 }
 
 
@@ -444,8 +451,8 @@ if [ $PITFT_SELECT -gt 2 ]; then
 fi
 
 PITFT_TYPES=("28r" "22")
-WIDTH_VALUES=(640 640 320 480)
-HEIGHT_VALUES=(480 480 240 320)
+WIDTH_VALUES=(320 320 320 480)
+HEIGHT_VALUES=(240 240 240 320)
 HZ_VALUES=(80000000 80000000 80000000 32000000)
 
 
