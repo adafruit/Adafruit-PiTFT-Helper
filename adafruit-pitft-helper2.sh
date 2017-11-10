@@ -42,13 +42,10 @@ function print_version() {
 }
 
 function print_help() {
-    echo "Usage: $0 -t [pitfttype]"
+    echo "Usage: $0 "
     echo "    -h            Print this help"
     echo "    -v            Print version information"
     echo "    -u [homedir]  Specify path of primary user's home directory (defaults to /home/pi)"
-    echo "    -t [type]     Specify the type of PiTFT: '28r' (PID 1601) or '28c' (PID 1983) or '35r' or '22'"
-    echo
-    echo "You must specify a type of display."
     exit 1
 }
 
@@ -148,16 +145,6 @@ function softwareinstall() {
     pip install evdev 1> /dev/null  || { warning "Pip failed to install software!" && exit 1; }
 }
 
-function overlayinstall() {
-    if [ -e /boot/overlays/pitft2x-notouch-overlay.dtbo ]; then
-		echo "pitft2x-notouch-overlay already exists. Skipping!"
-    else
-	cd ${target_homedir}
-	curl -sLO https://github.com/adafruit/Adafruit_Userspace_PiTFT/raw/master/pitft2x-notouch-overlay.dtbo
-	mv pitft2x-notouch-overlay.dtbo /boot/overlays/
-    fi
-}
-
 # update /boot/config.txt with appropriate values
 function update_configtxt() {
     if grep -q "adafruit-pitft-helper" "/boot/config.txt"; then
@@ -173,6 +160,10 @@ function update_configtxt() {
 
     if [ "${pitfttype}" == "28r" ]; then
         overlay="dtoverlay=pitft28-resistive,rotate=90,speed=64000000,fps=30"
+    fi
+
+    if [ "${pitfttype}" == "28c" ]; then
+        overlay="dtoverlay=pitft28-capacitive,rotate=90,speed=64000000,fps=30"
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
@@ -202,19 +193,12 @@ $overlay
 EOF
 }
 
-function touchmouseinstall() {
-    cd ${target_homedir}
-    echo "Downloading touchmouse.py"
-    curl -sLO https://raw.githubusercontent.com/adafruit/Adafruit_Userspace_PiTFT/master/touchmouse.py
-    echo "Adding touchmouse.py to /etc/rc.local"
-    # removing any old version
-    sed -i -e "/^sudo python.*touchmouse.py.*/d" /etc/rc.local
-    sed -i -e "s|^exit 0|sudo python $target_homedir/touchmouse.py \&\\nexit 0|" /etc/rc.local
-}
-
 function update_udev() {
     cat > /etc/udev/rules.d/95-touchmouse.rules <<EOF
 SUBSYSTEM=="input", ATTRS{name}=="touchmouse", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
+EOF
+    cat > /etc/udev/rules.d/95-ftcaptouch.rules <<EOF
+SUBSYSTEM=="input", ATTRS{name}=="EP0110M09", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
 EOF
     cat > /etc/udev/rules.d/95-stmpe.rules <<EOF
 SUBSYSTEM=="input", ATTRS{name}=="*stmpe*", ENV{DEVNAME}=="*event*", SYMLINK+="input/touchscreen"
@@ -290,7 +274,8 @@ function install_fbcp() {
     apt-get --yes --force-yes install cmake 1> /dev/null  || { warning "Apt failed to install software!" && exit 1; }
     echo "Downloading rpi-fbcp..."
     cd /tmp
-    curl -sLO https://github.com/tasanakorn/rpi-fbcp/archive/master.zip
+    #curl -sLO https://github.com/tasanakorn/rpi-fbcp/archive/master.zip
+    curl -sLO https://github.com/PaintYourDragon/rpi-fbcp/archive/master.zip
     echo "Uncompressing rpi-fbcp..."
     rm -rf /tmp/rpi-fbcp-master
     unzip master.zip 1> /dev/null  || { warning "Failed to uncompress fbcp!" && exit 1; }
@@ -381,13 +366,13 @@ EOF
     fi
 
     if [ "${pitfttype}" == "28c" ]; then
-        cat > /etc/X11/xorg.conf.d/99-calibration.conf <<EOF
+        cat > /usr/share/X11/xorg.conf.d/20-calibration.conf <<EOF
 Section "InputClass"
-         Identifier "captouch"
-         MatchProduct "ft6x06_ts"
-         Option "SwapAxes" "1"
-         Option "InvertY" "1"
-         Option "Calibration" "0 320 0 240"
+        Identifier "FocalTech Touchscreen Calibration"
+        MatchProduct "EP0110M09"
+        MatchDevicePath "/dev/input/event*"
+        Driver "libinput"
+        Option "TransformationMatrix" "0 1 0 -1 0 1 0 0 1"
 EndSection
 EOF
     fi
@@ -408,7 +393,7 @@ echo
 echo "Select configuration:"
 selectN "PiTFT 2.4\", 2.8\" or 3.2\" resistive" \
         "PiTFT 2.2\" no touch (not working yet!)" \
-        "PiTFT 2.8\" capacitive touch (not working yet!)" \
+        "PiTFT 2.8\" capacitive touch" \
         "PiTFT 3.5\" resistive touch " \
         "Quit without installing"
 PITFT_SELECT=$?
@@ -419,7 +404,7 @@ fi
 PITFT_TYPES=("28r" "22" "28c" "35r")
 WIDTH_VALUES=(320 320 320 480)
 HEIGHT_VALUES=(240 240 240 320)
-HZ_VALUES=(80000000 80000000 80000000 32000000)
+HZ_VALUES=(64000000 64000000 64000000 32000000)
 
 
 
@@ -492,16 +477,10 @@ sysupdate || bail "Unable to apt-get update"
 info PITFT "Installing Python libraries & Software..."
 softwareinstall || bail "Unable to install software"
 
-#info PITFT "Installing Device Tree Overlay..."
-#overlayinstall || bail "Unable to install overlay"
-
 info PITFT "Updating /boot/config.txt..."
 update_configtxt || bail "Unable to update /boot/config.txt"
 
-if [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]; then
-   #info PITFT "Installing touchscreen..."
-   #touchmouseinstall || bail "Unable to install touch mouse script"
-
+if [ "${pitfttype}" == "28r" ] || [ "${pitfttype}" == "35r" ]  || [ "${pitfttype}" == "28c" ] ; then
    info PITFT "Updating SysFS rules for Touchscreen..."
    update_udev || bail "Unable to update /etc/udev/rules.d"
 
