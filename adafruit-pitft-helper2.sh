@@ -415,10 +415,10 @@ echo "Run time of up to 5 minutes. Reboot required!"
 echo
 
 echo "Select configuration:"
-selectN "PiTFT 2.4\", 2.8\" or 3.2\" resistive" \
-        "PiTFT 2.2\" no touch (not working yet!)" \
-        "PiTFT 2.8\" capacitive touch" \
-        "PiTFT 3.5\" resistive touch " \
+selectN "PiTFT 2.4\", 2.8\" or 3.2\" resistive (240x320)" \
+        "PiTFT 2.2\" no touch (240x320)" \
+        "PiTFT 2.8\" capacitive touch (240x320)" \
+        "PiTFT 3.5\" resistive touch (320x480)" \
         "Quit without installing"
 PITFT_SELECT=$?
 if [ $PITFT_SELECT -gt 4 ]; then
