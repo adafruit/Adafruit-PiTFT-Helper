@@ -155,19 +155,19 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "22" ]; then
-        overlay="dtoverlay=pitft22,rotate=270,speed=64000000,fps=30"
+        overlay="dtoverlay=pitft22,rotate=${pitftrot},speed=64000000,fps=30"
     fi
 
     if [ "${pitfttype}" == "28r" ]; then
-        overlay="dtoverlay=pitft28-resistive,rotate=90,speed=64000000,fps=30"
+        overlay="dtoverlay=pitft28-resistive,rotate=${pitftrot},speed=64000000,fps=30"
     fi
 
     if [ "${pitfttype}" == "28c" ]; then
-        overlay="dtoverlay=pitft28-capacitive,rotate=90,speed=64000000,fps=30"
+        overlay="dtoverlay=pitft28-capacitive,rotate=${pitftrot},speed=64000000,fps=30"
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
-        overlay="dtoverlay=pitft35-resistive,rotate=270,speed=32000000,fps=20"
+        overlay="dtoverlay=pitft35-resistive,rotate=${pitftrot},speed=32000000,fps=20"
     fi
 
 
@@ -208,9 +208,26 @@ EOF
 # currently for '90' rotation only
 function update_pointercal() {
     if [ "${pitfttype}" == "28r" ]; then
-        cat > /etc/pointercal <<EOF
+	if [ "${pitftrot}" == "90" ]; then
+	    cat > /etc/pointercal <<EOF
 33 -5782 21364572 4221 35 -1006432 65536
 EOF
+	fi
+	if [ "${pitftrot}" == "180" ]; then
+	    cat > /etc/pointercal <<EOF
+-4273 61 16441290 4 -5772 21627524 65536
+EOF
+	fi
+	if [ "${pitftrot}" == "270" ]; then
+	    cat > /etc/pointercal <<EOF
+-9 5786 -784608 -4302 19 16620508 65536
+EOF
+	fi
+	if [ "${pitftrot}" == "0" ]; then
+	    cat > /etc/pointercal <<EOF
+4232 11 -879396 1 5786 -752768 65536
+EOF
+	fi
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
@@ -408,6 +425,17 @@ if [ $PITFT_SELECT -gt 4 ]; then
     exit 1
 fi
 
+echo "Select rotation:"
+selectN "90 degrees (landscape)" \
+        "180 degrees (portait)" \
+        "270 degrees (landscape)" \
+        "0 degrees (portait)"
+PITFT_ROTATE=$?
+if [ $PITFT_ROTATE -gt 4 ]; then
+    exit 1
+fi
+
+PITFT_ROTATIONS=("90" "180" "270" "0")
 PITFT_TYPES=("28r" "22" "28c" "35r")
 WIDTH_VALUES=(320 320 320 480)
 HEIGHT_VALUES=(240 240 240 320)
@@ -466,6 +494,7 @@ if [[ ! -e "$target_homedir" || ! -d "$target_homedir" ]]; then
 fi
 
 pitfttype=${PITFT_TYPES[$PITFT_SELECT-1]}
+pitftrot=${PITFT_ROTATIONS[$PITFT_ROTATE-1]}
 
 
 if [ "${pitfttype}" != "28r" ] && [ "${pitfttype}" != "28c" ] && [ "${pitfttype}" != "35r" ] && [ "${pitfttype}" != "22" ]; then
