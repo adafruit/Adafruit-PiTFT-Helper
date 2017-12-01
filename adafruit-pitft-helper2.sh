@@ -167,14 +167,13 @@ function update_configtxt() {
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
-        overlay="dtoverlay=pitft35-resistive,rotate=${pitftrot},speed=32000000,fps=20"
+        overlay="dtoverlay=pitft35-resistive,rotate=${pitftrot},speed=20000000,fps=20"
     fi
 
 
     date=`date`
 
     cat >> /boot/config.txt <<EOF
-
 # --- added by adafruit-pitft-helper $date ---
 [pi0]
 device_tree=bcm2708-rpi-0-w.dtb
@@ -231,9 +230,26 @@ EOF
     fi
 
     if [ "${pitfttype}" == "35r" ]; then
-        cat > /etc/pointercal <<EOF
-70 -8400 32309812 5634 -27 -1166100 65536
+	if [ "${pitftrot}" == "90" ]; then
+	    cat > /etc/pointercal <<EOF
+5 8425 -978304 -5747 61 22119468 65536
 EOF
+	fi
+	if [ "${pitftrot}" == "180" ]; then
+	    cat > /etc/pointercal <<EOF
+-5682 -1 22069150 13 -8452 32437698 65536
+EOF
+	fi
+	if [ "${pitftrot}" == "270" ]; then
+	    cat > /etc/pointercal <<EOF
+3 -8466 32440206 5703 -1 -1308696 65536
+EOF
+	fi
+	if [ "${pitftrot}" == "0" ]; then
+	    cat > /etc/pointercal <<EOF
+5724 -6 -1330074 26 8427 -1034528 65536
+EOF
+	fi
     fi
 
     if [ "${pitfttype}" == "28c" ]; then
