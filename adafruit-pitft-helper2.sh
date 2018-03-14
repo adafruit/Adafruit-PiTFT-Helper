@@ -181,7 +181,7 @@ device_tree=bcm2708-rpi-0-w.dtb
 device_tree=bcm2708-rpi-b-plus.dtb
 [pi2]
 device_tree=bcm2709-rpi-2-b.dtb
-[pi2]
+[pi3]
 device_tree=bcm2710-rpi-3-b.dtb
 [all]
 dtparam=spi=on
