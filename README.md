@@ -1,6 +1,12 @@
 # Adafruit-PiTFT-Helper
 
-A script for configuring Adafruit's PiTFT displays on a Raspberry Pi.
+### This script/repository is deprecated, as trying to do kernel updates on the fast-moving Raspberry Pi wasn't sustainable! We're now using a simpler device-tree-only script, available at https://github.com/adafruit/Raspberry-Pi-Installer-Scripts/blob/master/adafruit-pitft.sh
+
+We'll keep this repo public but archived for the curious.
+
+---------------------------------
+
+A (deprecated) script for configuring Adafruit's PiTFT displays on a Raspberry Pi.
 
 ## Attention RETROPIE Users:
 
