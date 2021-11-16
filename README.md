@@ -1,6 +1,6 @@
 # Adafruit-PiTFT-Helper
 
-### This script/repository is deprecated, as trying to do kernel updates on the fast-moving Raspberry Pi wasn't sustainable! We're now using a simpler device-tree-only script, available at https://github.com/adafruit/Raspberry-Pi-Installer-Scripts/blob/master/adafruit-pitft.sh
+### This script/repository is deprecated, as trying to do kernel updates on the fast-moving Raspberry Pi wasn't sustainable! We're now using a simpler device-tree-only script, available at https://github.com/adafruit/Raspberry-Pi-Installer-Scripts/blob/main/adafruit-pitft.py
 
 We'll keep this repo public but archived for the curious.
 
